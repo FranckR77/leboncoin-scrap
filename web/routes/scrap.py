@@ -1,8 +1,13 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException
 from src.scraper import scrape_all_pages
 from src.utils import insert_ads_to_db
+import threading
 
 router = APIRouter()
+
+# global flag
+scraping_lock = threading.Lock()
+scraping_in_progress = False
 
 
 # Async background task: scrape and insert ads
@@ -20,11 +25,30 @@ async def run_scraping_task(max_pages: int):
 
 # Launch scraper in background
 @router.post("/")
-async def run_scrap(background_tasks: BackgroundTasks, max_pages: int = 10):
-    try:
-        background_tasks.add_task(run_scraping_task, max_pages)
-        return {"message": f"Scraper launched in background (max_pages={max_pages})."}
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to launch scraper: {str(e)}"
-        )
+def run_scrap():
+    global scraping_in_progress
+
+    # Prevent concurrent runs
+    if scraping_in_progress:
+        raise HTTPException(status_code=409, detail="Scraping already in progress")
+
+    def task():
+        global scraping_in_progress
+        try:
+            print("Scraping started...")
+            ads = scrape_all_pages(max_pages=10)
+            insert_ads_to_db(ads)
+            print(f"Scraping finished — {len(ads)} ads inserted.")
+        except Exception as e:
+            print(f"Error during scraping: {e}")
+        finally:
+            scraping_in_progress = False
+            scraping_lock.release()  # release the lock
+
+    # Try acquiring the lock
+    if scraping_lock.acquire(blocking=False):
+        scraping_in_progress = True
+        threading.Thread(target=task, daemon=True).start()
+        return {"message": "Scraping started in background."}
+    else:
+        raise HTTPException(status_code=409, detail="Scraping already in progress")
