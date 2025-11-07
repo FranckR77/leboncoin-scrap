@@ -3,7 +3,7 @@ import json
 import requests
 from lxml import html
 from config.settings import HEADERS, BASE_URL
-from src.utils import anonymize, insert_ads_to_db
+from src.utils import anonymize
 
 
 # Fetch one page and return parsed JSON data from __NEXT_DATA__

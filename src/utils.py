@@ -2,6 +2,8 @@ import pymysql
 import json
 from hashlib import sha256
 from config.settings import DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME
+from pymysql.err import OperationalError
+from fastapi import HTTPException
 
 
 # Save all ads into a JSON file
@@ -23,16 +25,7 @@ def anonymize(ad: dict) -> dict:
 
 # Insert ads into MySQL
 def insert_ads_to_db(ads: list[dict]):
-    connection = pymysql.connect(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PASS,
-        database=DB_NAME,
-        port=DB_PORT,
-        charset="utf8mb4",
-        cursorclass=pymysql.cursors.DictCursor,
-    )
-
+    connection = get_connection()
     with connection:
         with connection.cursor() as cursor:
             for ad in ads:
@@ -59,3 +52,20 @@ def insert_ads_to_db(ads: list[dict]):
                 )
         connection.commit()
     print(f"{len(ads)} ads inserted into database.")
+
+
+# Simple DB connection
+def get_connection():
+    try:
+        return pymysql.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASS,
+            database=DB_NAME,
+            port=DB_PORT,
+            cursorclass=pymysql.cursors.DictCursor,
+        )
+    except OperationalError as e:
+        raise HTTPException(
+            status_code=500, detail=f"Database connection failed: {str(e)}"
+        )
