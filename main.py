@@ -1,8 +1,8 @@
-from src.scraper import scrape_all_pages
+from src.scraper import scrape_all_pages, insert_ads_to_db
 from src.utils import save_to_json
-import os
 
 if __name__ == "__main__":
-    ads = scrape_all_pages()
-    print(f"\nTotal ads scraped: {len(ads)}")
-    save_to_json(ads)
+    ads = scrape_all_pages(max_pages=4)
+    save_to_json(ads, "./output/ads.json")
+    insert_ads_to_db(ads)
+

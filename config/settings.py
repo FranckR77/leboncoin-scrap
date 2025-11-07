@@ -28,3 +28,34 @@ HEADERS = {
     "Sec-Fetch-User": "?1",
     "Upgrade-Insecure-Requests": "1",
 }
+
+# DB Info
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
+DB_NAME = os.getenv("DB_NAME")
+
+# Validate DB settings
+missing = [
+    var
+    for var, val in {
+        "DB_HOST": DB_HOST,
+        "DB_PORT": DB_PORT,
+        "DB_USER": DB_USER,
+        "DB_PASS": DB_PASS,
+        "DB_NAME": DB_NAME,
+    }.items()
+    if not val
+]
+
+if missing:
+    raise SystemExit(
+        f"Error: Missing database configuration values in .env: {', '.join(missing)}"
+    )
+
+# Convert port to int safely
+try:
+    DB_PORT = int(DB_PORT)
+except ValueError:
+    raise SystemExit("Error: DB_PORT must be an integer")

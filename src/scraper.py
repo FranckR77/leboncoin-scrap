@@ -3,6 +3,7 @@ import json
 import requests
 from lxml import html
 from config.settings import HEADERS, BASE_URL
+from src.utils import anonymize, insert_ads_to_db
 
 
 # Fetch one page and return parsed JSON data from __NEXT_DATA__
@@ -19,7 +20,7 @@ def fetch_page(page: int) -> dict | None:
     json_data_raw = tree.xpath('//script[@id="__NEXT_DATA__"]/text()')
 
     if not json_data_raw:
-        print(f"__NEXT_DATA__ not found on page {page}")
+        print("No JSON found in the page.")
         return None
 
     try:
@@ -34,20 +35,12 @@ def fetch_page(page: int) -> dict | None:
 def parse_ads(data: dict) -> list[dict]:
     search_data = data.get("props", {}).get("pageProps", {}).get("searchData", {})
     ads = search_data.get("ads", [])
-    parsed_ads = []
+    parsed = []
 
     for ad in ads:
-        title = ad.get("subject", "N/A")
-        category = ad.get("category_name", "N/A")
-        price = ad.get("price", [None])[0]
-        url = ad.get("url", "N/A")
         location = ad.get("location", {})
-        city = location.get("city", "")
-        zipcode = location.get("zipcode", "")
-        department = location.get("department_name", "")
-        region = location.get("region_name", "")
-
         attributes = ad.get("attributes", [])
+
         real_estate_type = next(
             (
                 a.get("value_label")
@@ -57,21 +50,27 @@ def parse_ads(data: dict) -> list[dict]:
             "N/A",
         )
 
-        parsed_ads.append(
+        # Author info
+        owner = ad.get("owner", {})
+        author_name = owner.get("name", "N/A")
+        has_phone = ad.get("has_phone", False)
+        contact_info = "Disponible" if has_phone else "Non communiqué"
+
+        parsed.append(
             {
-                "title": title,
-                "category": category,
+                "title": ad.get("subject", "N/A"),
+                "category": ad.get("category_name", "N/A"),
                 "type": real_estate_type,
-                "price": price,
-                "city": city,
-                "zipcode": zipcode,
-                "department": department,
-                "region": region,
-                "url": url,
+                "price": ad.get("price", [None])[0],
+                "city": location.get("city", ""),
+                "zipcode": location.get("zipcode", ""),
+                "region": location.get("region_name", ""),
+                "url": f"https://www.leboncoin.fr/ad/{ad.get('list_id')}",
+                "author": author_name,
+                "contact": contact_info,
             }
         )
-
-    return parsed_ads
+    return parsed
 
 
 # Scrape multiple pages using pagination until no more ads
@@ -81,15 +80,15 @@ def scrape_all_pages(max_pages: int = 10, delay: float = 1.0) -> list[dict]:
         data = fetch_page(page)
         if not data:
             break
-
         ads = parse_ads(data)
         if not ads:
             print(f"No more ads on page {page}, stopping.")
             break
 
-        all_ads.extend(ads)
-        print(f"Page {page}: {len(ads)} ads (total {len(all_ads)})")
+        # Anonymize each ad before saving
+        anonymized = [anonymize(a) for a in ads]
+        all_ads.extend(anonymized)
 
+        print(f"Page {page}: {len(ads)} ads collected")
         time.sleep(delay)
-
     return all_ads
