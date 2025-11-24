@@ -17,10 +17,10 @@ services:
     image: mysql:8
     container_name: lbc_mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootsecret
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: lbc
       MYSQL_USER: lbc_user
-      MYSQL_PASSWORD: secret
+      MYSQL_PASSWORD: password
     ports:
       - "3306:3306"
     volumes:
