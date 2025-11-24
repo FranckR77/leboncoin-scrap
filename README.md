@@ -23,7 +23,6 @@ Ce projet a pour but d’automatiser la récupération des annonces depuis LeBon
 L’objectif principal est de disposer d’un outil de veille sur des produits ou biens précis (immobilier, véhicules, matériel, etc.), avec des filtres dynamiques et un tableau de bord centralisé.
 
 ## Usage  
-
 ### Fonctionnalités
 * 	Scraping automatisé des annonces LeBonCoin
 *  Stockage des résultats dans une base MySQL
@@ -105,40 +104,42 @@ git clone https://github.com/Tchoup7790/lbc-immo-scraper
 cd ./lbc-immo-scraper
 ```
 
-3. Installez les dépendances
-	
+3. Configurer les variables d’environnement
+    - Dupliquer le fichier `.env.example` et renommez-le en `.env`.
+    - Modifiez les variables d’environnement dans le fichier `.env`.
+
+
+La connexion avec *mysql* en local est déjà présente.
+
+4. Lancer le projet via Docker
+
+```bash
+docker compose up --build
+```
+
+Ce lancement :
+    - démarre l’API,
+    - démarre MySQL,
+    - exécute automatiquement db/database.sql pour créer et initialiser la base.
+
+Aucune action supplémentaire n’est requise pour la base de données.
+
+#### Aucune action supplémentaire n’est requise pour la base de données.
+
+
+1. Installation des dépendancesa:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Configurer les variables d’environnement
-    - Dupliquer le fichier `.env.example` et renommez-le en `.env`.
-    - Modifiez les variables d’environnement dans le fichier `.env`.
+2. Lancement
 
-5. Lancer le projet
-	
 ```bash
 python main.py
 ```
 
-6. Création et population de la Base de données :
-	- Lancer votre service de base de données 
-
-	```bash
-	brew services start mysql
-	```
-		
-		ou
-		
-	- Lancer Docker pour la base de données
-	
-	```bash
-	docker-compose up —build
-	```
-
-
-
-	 Exécutez le fichier **database.sql** pour créer et peupler votre base de données
+Dans ce cas, assurez-vous qu’un serveur MySQL (local ou Docker) tourne et que vos variables .env pointent vers le bon hôte.
 
 ## À Propos
 ### Auteurs
