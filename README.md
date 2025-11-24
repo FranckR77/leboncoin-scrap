@@ -124,7 +124,9 @@ Ce lancement :
 
 Aucune action supplémentaire n’est requise pour la base de données.
 
-#### Aucune action supplémentaire n’est requise pour la base de données.
+Le site est accessible via [0.0.0.0](http://localhost:8000/)
+
+#### Utiliser l’API en local hors Docker (optionnel)
 
 
 1. Installation des dépendancesa:
