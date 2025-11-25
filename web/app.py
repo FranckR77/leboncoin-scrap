@@ -9,7 +9,7 @@ from web.routes import ads, scrap
 app = FastAPI()
 
 # Mount static files
-app.mount("/static", StaticFiles(directory="web/static"), name="static")
+#app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
 # Templates (HTML)
 templates = Jinja2Templates(directory="web/templates")

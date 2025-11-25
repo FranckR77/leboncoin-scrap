@@ -1,6 +1,7 @@
 import time
 import json
 import requests
+import certifi
 from lxml import html
 from config.settings import HEADERS, BASE_URL
 from src.utils import anonymize
@@ -11,7 +12,15 @@ def fetch_page(page: int) -> dict | None:
     url = BASE_URL.format(page)
     print(f"Fetching page {page}...")
 
-    response = requests.get(url, headers=HEADERS, timeout=15)
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+    except requests.exceptions.SSLError as e:
+        print(f"SSL error: {e}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Network error: {e}")
+        return None
+
     if response.status_code != 200:
         print(f"Failed to fetch page {page}: HTTP {response.status_code}")
         return None
@@ -29,7 +38,6 @@ def fetch_page(page: int) -> dict | None:
     except json.JSONDecodeError:
         print(f"Invalid JSON on page {page}")
         return None
-
 
 # Extract ads from the JSON structure
 def parse_ads(data: dict) -> list[dict]:
