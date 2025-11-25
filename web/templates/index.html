@@ -2,195 +2,255 @@
 <html lang="fr">
 
 <head>
-	<meta charset="UTF-8">
-	<title>LeBonCoin Scraper — Dashboard</title>
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1/new.min.css">
-	<style>
-		body {
-			max-width: 900px;
-			margin-left: 2rem auto;
-			margin-right: 2rem auto;
-			margin-bottom: 2rem auto;
-		}
+  <meta charset="UTF-8">
+  <title>LeBonCoin Scraper — Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1/new.min.css">
+  <style>
+    body {
+      max-width: 900px;
+      margin: 2rem auto;
+      margin-bottom: 2rem;
+    }
 
-		header {
-			margin-bottom: 2rem;
-		}
+    header {
+      margin-bottom: 2rem;
+    }
 
-		.actions {
-			display: flex;
-			align-items: center;
-			gap: 1rem;
-		}
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
 
-		button {
-			cursor: pointer;
-		}
+    button {
+      cursor: pointer;
+    }
 
-		#message {
-			font-weight: bold;
-		}
+    #message {
+      font-weight: bold;
+    }
 
-		.ad-card {
-			padding: 0.8rem;
-			margin: 0.5rem 0;
-			border: 1px solid #ddd;
-			border-radius: 8px;
-			background: #fafafa;
-			display: flex;
-			flex-direction: row;
-			align-items: center;
-			justify-content: space-between;
-			gap: 8px;
-		}
+    .ad-card {
+      padding: 0.8rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
 
-		.ad-image {
-			width: fit-content;
-			height: 150px;
-			object-fit: scale-down;
-			border-radius: 4px;
-			margin-bottom: 0;
-		}
+    .ad-image {
+      width: fit-content;
+      height: 150px;
+      object-fit: scale-down;
+      border-radius: 4px;
+      margin-bottom: 0;
+    }
 
-		.ad-card small {
-			color: #666;
-		}
+    .ad-card small {
+      color: #666;
+    }
 
-		@media (prefers-color-scheme: dark) {
-			.ad-card {
-				background: #1e1e1e;
-				border-color: #333;
-			}
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      margin-left: 0.3rem;
+    }
 
-			.ad-card small {
-				color: #aaa;
-			}
-		}
-	</style>
+    .badge-suspicious {
+      background-color: #ffdddd;
+      border: 1px solid #ff5555;
+      color: #a80000;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .ad-card {
+        background: #1e1e1e;
+        border-color: #333;
+      }
+
+      .ad-card small {
+        color: #aaa;
+      }
+
+      .badge-suspicious {
+        background-color: #4a1f1f;
+        border-color: #ff5555;
+        color: #ffaaaa;
+      }
+    }
+  </style>
 </head>
 
 <body>
-	<header>
-		<h1>LeBonCoin Scraper</h1>
-		<p>Interface de gestion du scraping et affichage des annonces</p>
-	</header>
+  <header>
+    <h1>LeBonCoin Scraper</h1>
+    <p>Interface de gestion du scraping et affichage des annonces</p>
+  </header>
 
-	<main>
-		<section>
-			<h2>Actions</h2>
-			<div class="actions">
-				<button id="scrap-btn">Lancer le scrap</button>
-				<button id="status-btn">Vérifier le statut</button>
-				<span id="message"></span>
-			</div>
-		</section>
+  <main>
+    <section>
+      <h2>Actions</h2>
+      <div class="actions">
+        <button id="scrap-btn">Lancer le scrap</button>
+        <button id="status-btn">Vérifier le statut</button>
+        <span id="message"></span>
+      </div>
+    </section>
 
-		<section>
-			<h2>Filtres</h2>
-			<form id="filter-form">
-				<label>
-					Ville :
-					<input type="text" id="city" name="city" placeholder="ex: Nîmes">
-				</label>
-				<label>
-					Prix min :
-					<input type="number" id="min_price" name="min_price" min="0">
-				</label>
-				<label>
-					Prix max :
-					<input type="number" id="max_price" name="max_price" min="0">
-				</label>
-				<button type="submit">Appliquer les filtres</button>
-				<button type="button" id="reset-btn">Réinitialiser</button>
-			</form>
-		</section>
+    <section>
+      <h2>Filtres</h2>
+      <form id="filter-form">
+        <label>
+          Ville :
+          <input type="text" id="city" name="city" placeholder="ex: Nîmes">
+        </label>
+        <label>
+          Prix min :
+          <input type="number" id="min_price" name="min_price" min="0">
+        </label>
+        <label>
+          Prix max :
+          <input type="number" id="max_price" name="max_price" min="0">
+        </label>
 
-		<section>
-			<h2>Annonces</h2>
-			<div id="ads"></div>
-		</section>
-	</main>
+        <label>
+          <input type="checkbox" id="suspicious_only" name="suspicious_only">
+          Annonces suspectes uniquement
+        </label>
 
-	<script>
-		const messageEl = document.getElementById('message');
-		const adsContainer = document.getElementById('ads');
+        <label>
+          <input type="checkbox" id="order_by_score" name="order_by_score">
+          Trier par score décroissant
+        </label>
 
-		async function loadAds(filters = {}) {
-			try {
-				const params = new URLSearchParams(filters).toString();
-				const res = await fetch(`/ads?${params}`);
-				const data = await res.json();
-				renderAds(data.ads);
-			} catch (err) {
-				messageEl.textContent = 'Erreur lors du chargement des annonces.';
-			}
-		}
+        <button type="submit">Appliquer les filtres</button>
+        <button type="button" id="reset-btn">Réinitialiser</button>
+      </form>
+    </section>
 
+    <section>
+      <h2>Annonces</h2>
+      <div id="ads"></div>
+    </section>
+  </main>
 
-		function renderAds(ads) {
-			adsContainer.innerHTML = '';
-			if (!ads || ads.length === 0) {
-				adsContainer.innerHTML = '<p>Aucune annonce trouvée.</p>';
-				return;
-			}
-			for (const ad of ads) {
-				const div = document.createElement('div');
-				div.className = 'ad-card';
-				div.innerHTML = `
-			<div>
-				<strong>${ad.title}</strong><br>
-				${ad.price ? `${ad.price} €` : 'Prix non communiqué'}	<br>
-			  ${ad.city || 'Ville inconnue'} - ${ad.zipcode || 'CP inconnue'}<br>
-				<small>${ad.category || ''} / ${ad.type || ''}</small><br>
-				<a href="${ad.url}" target="_blank">Voir l'annonce</a>
-			</div>
-			${ad.image_url ? `<img src="${ad.image_url}" alt="${ad.title}" class="ad-image">` : ''}
-					`;
-				adsContainer.appendChild(div);
-			}
-		}
-		document.getElementById('scrap-btn').onclick = async () => {
-			messageEl.textContent = 'Scraping en cours...';
-			try {
-				const res = await fetch('/scrap', {method: 'POST'});
-				if (!res.ok) {
-					const err = await res.json();
-					messageEl.textContent = err.detail || 'Une erreur est survenue.';
-					return;
-				}
-				const data = await res.json();
-				messageEl.textContent = data.message;
-				setTimeout(() => loadAds(), 1500);
-			} catch {
-				messageEl.textContent = 'Erreur lors du lancement du scrap.';
-			}
-		};
+  <script>
+    const messageEl = document.getElementById('message');
+    const adsContainer = document.getElementById('ads');
 
-		document.getElementById('status-btn').onclick = async () => {
-			const res = await fetch('/scrap/status');
-			const data = await res.json();
-			messageEl.textContent = data.scraping
-				? 'Scraping en cours...'
-				: 'Aucun scraping en cours.';
-		};
+    async function loadAds(filters = {}) {
+      try {
+        const params = new URLSearchParams(filters).toString();
+        const res = await fetch(`/ads?${params}`);
+        const data = await res.json();
+        renderAds(data.ads);
+      } catch (err) {
+        console.error(err);
+        messageEl.textContent = 'Erreur lors du chargement des annonces.';
+      }
+    }
 
-		document.getElementById('filter-form').onsubmit = (e) => {
-			e.preventDefault();
-			const filters = {
-				city: document.getElementById('city').value.trim(),
-				min_price: document.getElementById('min_price').value,
-				max_price: document.getElementById('max_price').value,
-			};
-			loadAds(filters);
-		};
+    function renderAds(ads) {
+      adsContainer.innerHTML = '';
+      if (!ads || ads.length === 0) {
+        adsContainer.innerHTML = '<p>Aucune annonce trouvée.</p>';
+        return;
+      }
 
-		document.getElementById('reset-btn').onclick = () => {
-			document.getElementById('filter-form').reset();
-			loadAds();
-		};
+      for (const ad of ads) {
+        const div = document.createElement('div');
+        div.className = 'ad-card';
 
-		loadAds();
-	</script>
+        const suspiciousBadge = ad.suspicious
+          ? `<span class="badge badge-suspicious">Suspect</span>`
+          : '';
+
+        const scoreDisplay = (ad.score !== undefined && ad.score !== null)
+          ? `<small>Score : ${ad.score}/5</small><br>`
+          : '';
+
+        div.innerHTML = `
+          <div>
+            <strong>${ad.title}</strong> ${suspiciousBadge}<br>
+            ${ad.price ? `${ad.price} €` : 'Prix non communiqué'}<br>
+            ${ad.city || 'Ville inconnue'} - ${ad.zipcode || 'CP inconnue'}<br>
+            <small>${ad.category || ''} / ${ad.type || ''}</small><br>
+            ${scoreDisplay}
+            <a href="${ad.url}" target="_blank">Voir l'annonce</a>
+          </div>
+          ${ad.image_url ? `<img src="${ad.image_url}" alt="${ad.title}" class="ad-image">` : ''}
+        `;
+        adsContainer.appendChild(div);
+      }
+    }
+
+    document.getElementById('scrap-btn').onclick = async () => {
+      messageEl.textContent = 'Scraping en cours...';
+      try {
+        const res = await fetch('/scrap', { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json();
+          messageEl.textContent = err.detail || 'Une erreur est survenue.';
+          return;
+        }
+        const data = await res.json();
+        messageEl.textContent = data.message;
+        setTimeout(() => loadAds(), 1500);
+      } catch {
+        messageEl.textContent = 'Erreur lors du lancement du scrap.';
+      }
+    };
+
+    document.getElementById('status-btn').onclick = async () => {
+      try {
+        const res = await fetch('/scrap/status');
+        const data = await res.json();
+        messageEl.textContent = data.scraping
+          ? 'Scraping en cours...'
+          : 'Aucun scraping en cours.';
+      } catch {
+        messageEl.textContent = 'Erreur lors de la récupération du statut.';
+      }
+    };
+
+    document.getElementById('filter-form').onsubmit = (e) => {
+      e.preventDefault();
+
+      const filters = {
+        city: document.getElementById('city').value.trim(),
+        min_price: document.getElementById('min_price').value,
+        max_price: document.getElementById('max_price').value,
+      };
+
+      const suspiciousCheckbox = document.getElementById('suspicious_only');
+      const orderScoreCheckbox = document.getElementById('order_by_score');
+
+      if (suspiciousCheckbox.checked) {
+        filters.suspicious_only = true;
+      }
+      if (orderScoreCheckbox.checked) {
+        filters.order_by_score = true;
+      }
+
+      loadAds(filters);
+    };
+
+    document.getElementById('reset-btn').onclick = () => {
+      document.getElementById('filter-form').reset();
+      loadAds();
+    };
+
+    // Chargement initial
+    loadAds();
+  </script>
 </body>
 
 </html>

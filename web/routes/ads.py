@@ -10,6 +10,12 @@ def list_ads(
     city: str | None = Query(None, description="Filter by city"),
     min_price: str | None = Query(None, description="Minimum price"),
     max_price: str | None = Query(None, description="Maximum price"),
+    suspicious_only: bool = Query(
+        False, description="If true, only return suspicious ads"
+    ),
+    order_by_score: bool = Query(
+        False, description="If true, order results by score DESC"
+    ),
 ):
     query = "SELECT * FROM ads WHERE 1=1"
     params: list = []
@@ -36,12 +42,19 @@ def list_ads(
         query += " AND price <= %s"
         params.append(max_price)
 
+    if suspicious_only:
+        query += " AND suspicious = 1"
+
+    if order_by_score:
+        query += " ORDER BY score DESC"
+
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, params)
                 data = cur.fetchall()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+        # au lieu de crasher toute l'API
+        return {"count": 0, "ads": [], "error": str(e)}
 
     return {"count": len(data), "ads": data}
