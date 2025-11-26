@@ -24,3 +24,11 @@ async def read_root(request: Request):
 # Add routes
 app.include_router(ads.router, prefix="/ads", tags=["Ads"])
 app.include_router(scrap.router, prefix="/scrap", tags=["Scraper"])
+@app.get("/legal/cgu", response_class=HTMLResponse)
+async def legal_cgu(request: Request):
+    return templates.TemplateResponse("cgu.html", {"request": request})
+
+@app.get("/legal/privacy", response_class=HTMLResponse)
+async def legal_privacy(request: Request):
+    return templates.TemplateResponse("privacy.html", {"request": request})
+
