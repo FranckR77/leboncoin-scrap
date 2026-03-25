@@ -8,6 +8,7 @@
   <div class="actions">
     <button id="scrap-btn">Lancer le scrap</button>
     <button id="status-btn">Vérifier le statut</button>
+    <button id="predict-btn">Prédire le prix</button>
     <span id="message"></span>
   </div>
 </section>
@@ -52,6 +53,25 @@
 
 {% block scripts %}
 <script>
+document.getElementById("predict-btn").onclick = async () => {
+    const payload = {
+        city: "Nîmes",
+        zipcode: "30000",
+        region: "Occitanie",
+        category: "Ventes",
+        type: "Appartement"
+    };
+
+    const res = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    alert("Prix estimé : " + data.predicted_price + " €");
+};
+
   const messageEl = document.getElementById('message');
   const adsContainer = document.getElementById('ads');
 
@@ -86,37 +106,60 @@
         ? `<small>Score : ${ad.score}/5</small><br>`
         : '';
 
-      div.innerHTML = `
-        <div>
-          <strong>${ad.title}</strong> ${suspiciousBadge}<br>
-          ${ad.price ? `${ad.price} €` : 'Prix non communiqué'}<br>
-          ${ad.city || 'Ville inconnue'} - ${ad.zipcode || 'CP inconnue'}<br>
-          <small>${ad.category || ''} / ${ad.type || ''}</small><br>
-          ${scoreDisplay}
-          <a href="${ad.url}" target="_blank">Voir l'annonce</a>
-        </div>
-        ${ad.image_url ? `<img src="${ad.image_url}" alt="${ad.title}" class="ad-image">` : ''}
-      `;
+    div.innerHTML = `
+      <div>
+        <strong>${ad.title}</strong> ${suspiciousBadge}<br>
+        ${ad.price ? `${ad.price} €` : 'Prix non communiqué'}<br>
+        ${ad.city || 'Ville inconnue'} - ${ad.zipcode || 'CP inconnue'}<br>
+        <small>${ad.category || ''} / ${ad.type || ''}</small><br>
+        ${scoreDisplay}
+        <a href="${ad.url}" target="_blank">Voir l'annonce</a>
+      </div>
+      ${ad.image_url ? `<img src="${ad.image_url}" alt="${ad.title}" class="ad-image">` : ''}
+    `;
       adsContainer.appendChild(div);
     }
   }
 
-  document.getElementById('scrap-btn').onclick = async () => {
-    messageEl.textContent = 'Scraping en cours...';
-    try {
-      const res = await fetch('/scrap', { method: 'POST' });
-      if (!res.ok) {
-        const err = await res.json();
-        messageEl.textContent = err.detail || 'Une erreur est survenue.';
-        return;
-      }
-      const data = await res.json();
-      messageEl.textContent = data.message;
-      setTimeout(() => loadAds(), 1500);
-    } catch {
-      messageEl.textContent = 'Erreur lors du lancement du scrap.';
-    }
-  };
+          let scrapInterval = null;
+
+          document.getElementById('scrap-btn').onclick = async () => {
+              messageEl.textContent = 'Scraping démarré...';
+
+              try {
+              const res = await fetch('/scrap', {method: 'POST'});
+              const data = await res.json();
+
+              if (!res.ok) {
+              messageEl.textContent = data.detail || 'Une erreur est survenue.';
+              return;
+          }
+
+              messageEl.textContent = "Scraping en cours…";
+
+              // 🔥 Vérification du statut toutes les 1s
+              scrapInterval = setInterval(async () => {
+              const statusRes = await fetch('/scrap/status');
+              const statusData = await statusRes.json();
+
+              if (!statusData.scraping) {
+              // ✔ Scrap terminé
+              clearInterval(scrapInterval);
+              scrapInterval = null;
+
+              messageEl.textContent = "Scraping terminé, mise à jour…";
+
+              await loadAds(); // 🔥 Recharge automatique des annonces
+
+              messageEl.textContent = "Annonces mises à jour ✔";
+          }
+          }, 1000);
+
+          } catch (err) {
+              console.error(err);
+              messageEl.textContent = 'Erreur lors du lancement du scrap.';
+          }
+          };
 
   document.getElementById('status-btn').onclick = async () => {
     try {

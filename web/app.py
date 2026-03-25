@@ -32,3 +32,23 @@ async def legal_cgu(request: Request):
 async def legal_privacy(request: Request):
     return templates.TemplateResponse("privacy.html", {"request": request})
 
+from ml.predict import predict_price
+from fastapi import Body
+
+@app.post("/predict")
+async def predict(payload: dict = Body(...)):
+    """
+    Exemple de JSON attendu :
+    {
+        "city": "Nîmes",
+        "zipcode": "30000",
+        "region": "Occitanie",
+        "category": "Ventes immobilières",
+        "type": "Maison"
+    }
+    """
+    try:
+        predicted = predict_price(payload)
+        return {"predicted_price": round(predicted)}
+    except Exception as e:
+        return {"error": str(e)}

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from src.scraper import scrape_all_pages
 from src.utils import insert_ads_to_db
+from ml.train import train_model
 import threading
 
 router = APIRouter()
@@ -39,11 +40,17 @@ def run_scrap():
             ads = scrape_all_pages(max_pages=10)
             insert_ads_to_db(ads)
             print(f"Scraping finished — {len(ads)} ads inserted.")
+
+            # 🔥 Réentraînement du modèle ML 🎉
+            print("Retraining ML model…")
+            train_model()
+            print("ML model retrained and updated.")
+
         except Exception as e:
             print(f"Error during scraping: {e}")
         finally:
             scraping_in_progress = False
-            scraping_lock.release()  # release the lock
+            scraping_lock.release()
 
     # Try acquiring the lock
     if scraping_lock.acquire(blocking=False):
