@@ -142,14 +142,3 @@ python main.py
 ```
 
 Dans ce cas, assurez-vous qu’un serveur MySQL (local ou Docker) tourne et que vos variables .env pointent vers le bon hôte.
-
-## À Propos
-### Auteurs
-* [Tchoup7790](https://github.com/Tchoup7790)
-
-### Contact
-Pour toute question ou suggestion, ouvrez une issue ou contactez-moi à [juliojuliobaptiste@gmail.com](mailto:juliojuliobaptiste@gmail.com).
-
-### License 
-Ce projet est distribué sous la licence MIT.
-Voir le fichier LICENSE pour plus de détails.
