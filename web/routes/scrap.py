@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from src.scraper import scrape_all_pages
+from src.scraper.scraper import scrape_all_pages
 from src.utils import insert_ads_to_db
-from ml.train import train_model
 import threading
 
 router = APIRouter()
@@ -24,7 +23,6 @@ async def run_scraping_task(max_pages: int):
         print(f"[SCRAPER:KO] Error: {e}")
 
 
-# Launch scraper in background
 @router.post("/")
 def run_scrap():
     global scraping_in_progress
@@ -40,11 +38,6 @@ def run_scrap():
             ads = scrape_all_pages(max_pages=10)
             insert_ads_to_db(ads)
             print(f"Scraping finished — {len(ads)} ads inserted.")
-
-            # 🔥 Réentraînement du modèle ML 🎉
-            print("Retraining ML model…")
-            train_model()
-            print("ML model retrained and updated.")
 
         except Exception as e:
             print(f"Error during scraping: {e}")

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Query
 from math import ceil
 from src.utils import get_connection
+from fastapi import APIRouter
 
 router = APIRouter()
-
 
 @router.get("/")
 def list_ads(

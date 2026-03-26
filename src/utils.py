@@ -4,7 +4,11 @@ from hashlib import sha256
 from config.settings import DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME
 from pymysql.err import OperationalError, IntegrityError
 from fastapi import HTTPException
-
+import csv
+import os
+from datetime import datetime
+import pandas as pd
+import numpy as np
 
 # Save all ads into a JSON file
 def save_to_json(data: list[dict], filename: str = "./data/ads.json"):
@@ -88,9 +92,9 @@ def insert_ads_to_db(ads: list[dict]):
 
     sql = """
         INSERT INTO ads (
-            title, category, type, price, city,
+            title, category, type, surface, price, city,
             zipcode, region, url, image_url, author, contact, suspicious, score
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """
 
     values = []
@@ -102,6 +106,7 @@ def insert_ads_to_db(ads: list[dict]):
                 ad.get("title"),
                 ad.get("category"),
                 ad.get("type"),
+                ad.get("surface"),
                 ad.get("price"),
                 ad.get("city"),
                 ad.get("zipcode"),
@@ -178,3 +183,130 @@ def get_connection():
         raise HTTPException(
             status_code=500, detail=f"Database connection failed: {str(e)}"
         )
+
+def export_raw_ads(output_dir: str = "./datalake/raw"):
+    os.makedirs(output_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{output_dir}/ads_raw_{timestamp}.csv"
+
+    query = "SELECT * FROM ads ORDER BY id ASC"
+
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+    if not rows:
+        print("Aucune donnée en base, export annulé.")
+        return None
+
+    fieldnames = rows[0].keys()
+
+    with open(filename, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"[RAW] CSV exporté : {filename}")
+    return filename
+
+def export_staging_ads(output_dir: str = "./datalake/staging"):
+    raw_file = export_raw_ads()  # réutilisation de ton export RAW
+
+    if not raw_file:
+        return None
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    df = pd.read_csv(raw_file)
+
+    # Nettoyage léger avant nettoyage complet (Silver)
+    df["price"] = pd.to_numeric(df["price"], errors="coerce")
+    df["surface"] = (
+        df["surface"].astype(str).str.extract(r"(\d+)").astype(float)
+    )
+
+    df["title"] = df["title"].astype(str).str.strip()
+    df["city"] = df["city"].astype(str).str.strip().str.title()
+    df["region"] = df["region"].astype(str).str.strip().str.title()
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    staging_file = f"{output_dir}/ads_staging_{timestamp}.csv"
+    df.to_csv(staging_file, index=False, encoding="utf-8")
+
+    print(f"[STAGING] Fichier staging généré : {staging_file}")
+    return staging_file
+
+def process_silver(
+    staging_file: str,
+    output_dir="./datalake/processed",
+    quality_dir="./datalake/quality"
+):
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(quality_dir, exist_ok=True)
+
+    df = pd.read_csv(staging_file)
+    report = {}
+
+    # =============================
+    # 1. Doublons
+    # =============================
+    before = len(df)
+    df.drop_duplicates(subset=["url"], inplace=True)
+    report["duplicates_removed"] = before - len(df)
+
+    # =============================
+    # 2. Normalisation types
+    # =============================
+    df["price"] = pd.to_numeric(df["price"], errors="coerce")
+    df["surface"] = pd.to_numeric(df["surface"], errors="coerce")
+
+    # =============================
+    # 3. Clean des chaînes
+    # =============================
+    for col in ["title", "city", "region", "category", "type"]:
+        df[col] = df[col].astype(str).str.strip().str.title()
+
+    # =============================
+    # 4. Anomalies (prix, surface)
+    # =============================
+    report["invalid_price"] = int(df["price"].lt(1000).sum())
+    report["invalid_surface"] = int(df["surface"].lt(5).sum())
+
+    # =============================
+    # 5. URL valides
+    # =============================
+    df["url_valid"] = df["url"].str.startswith("http")
+    report["invalid_urls"] = int((~df["url_valid"]).sum())
+    df = df[df["url_valid"]]
+
+    # =============================
+    # 6. Valeurs manquantes
+    # =============================
+    report["missing_values"] = df.isna().sum().to_dict()
+
+    # =============================
+    # 7. Export SILVER (clean)
+    # =============================
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    out_file = f"{output_dir}/ads_clean_{timestamp}.parquet"
+    df.to_parquet(out_file, index=False)
+
+    # =============================
+    # 8. Rapport qualité
+    # =============================
+    quality_file = f"{quality_dir}/quality_report_{timestamp}.json"
+    with open(quality_file, "w") as f:
+        json.dump(report, f, indent=2)
+
+    print(f"[SILVER] Clean file: {out_file}")
+    print(f"[QUALITY] Report: {quality_file}")
+
+    return out_file, quality_file
+
+def full_data_pipeline():
+    staging_file = export_staging_ads()
+    if not staging_file:
+        return None
+    return process_silver(staging_file)

@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS ads (
     title VARCHAR(255),
     category VARCHAR(100),
     type VARCHAR(100),
+    surface VARCHAR(10),
     price INT,
     city VARCHAR(100),
     zipcode VARCHAR(20),

@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 # Import routes
 from web.routes import ads, scrap
+from web.routes import export
+from web.routes import clean
+from web.routes import pipeline
 
 app = FastAPI()
 
@@ -24,6 +26,9 @@ async def read_root(request: Request):
 # Add routes
 app.include_router(ads.router, prefix="/ads", tags=["Ads"])
 app.include_router(scrap.router, prefix="/scrap", tags=["Scraper"])
+app.include_router(export.router, prefix="/export", tags=["Export"])
+app.include_router(clean.router, prefix="/clean", tags=["Clean"])
+app.include_router(pipeline.router, prefix="/pipeline", tags=["Pipeline"])
 @app.get("/legal/cgu", response_class=HTMLResponse)
 async def legal_cgu(request: Request):
     return templates.TemplateResponse("cgu.html", {"request": request})
@@ -31,24 +36,3 @@ async def legal_cgu(request: Request):
 @app.get("/legal/privacy", response_class=HTMLResponse)
 async def legal_privacy(request: Request):
     return templates.TemplateResponse("privacy.html", {"request": request})
-
-from ml.predict import predict_price
-from fastapi import Body
-
-@app.post("/predict")
-async def predict(payload: dict = Body(...)):
-    """
-    Exemple de JSON attendu :
-    {
-        "city": "Nîmes",
-        "zipcode": "30000",
-        "region": "Occitanie",
-        "category": "Ventes immobilières",
-        "type": "Maison"
-    }
-    """
-    try:
-        predicted = predict_price(payload)
-        return {"predicted_price": round(predicted)}
-    except Exception as e:
-        return {"error": str(e)}

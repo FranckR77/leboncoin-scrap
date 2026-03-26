@@ -4,203 +4,227 @@
 
 {% block content %}
 <section>
-  <h2>Actions</h2>
-  <div class="actions">
-    <button id="scrap-btn">Lancer le scrap</button>
-    <button id="status-btn">Vérifier le statut</button>
-    <button id="predict-btn">Prédire le prix</button>
-    <span id="message"></span>
-  </div>
+    <h2>Actions</h2>
+    <div class="actions">
+        <button id="scrap-btn">Lancer le scrap</button>
+        <button id="status-btn">Vérifier le statut</button>
+        <button id="export-btn">Exporter CSV</button>
+        <button id="pipeline-btn">Pipeline complet</button>
+        <span id="message"></span>
+    </div>
 </section>
 
 <section>
-  <h2>Filtres</h2>
-  <form id="filter-form">
-    <label>
-      Ville :
-      <input type="text" id="city" name="city" placeholder="ex: Nîmes">
-    </label>
-    <label>
-      Prix min :
-      <input type="number" id="min_price" name="min_price" min="0">
-    </label>
-    <label>
-      Prix max :
-      <input type="number" id="max_price" name="max_price" min="0">
-    </label>
+    <h2>Filtres</h2>
+    <form id="filter-form">
+        <label>
+            Ville :
+            <input type="text" id="city" name="city" placeholder="ex: Nîmes">
+        </label>
+        <label>
+            Prix min :
+            <input type="number" id="min_price" name="min_price" min="0">
+        </label>
+        <label>
+            Prix max :
+            <input type="number" id="max_price" name="max_price" min="0">
+        </label>
 
-    <label>
-      <input type="checkbox" id="suspicious_only" name="suspicious_only">
-      Annonces suspectes uniquement
-    </label>
+        <label>
+            <input type="checkbox" id="suspicious_only" name="suspicious_only">
+            Annonces suspectes uniquement
+        </label>
 
-    <label>
-      <input type="checkbox" id="order_by_score" name="order_by_score">
-      Trier par score décroissant
-    </label>
+        <label>
+            <input type="checkbox" id="order_by_score" name="order_by_score">
+            Trier par score décroissant
+        </label>
 
-    <button type="submit">Appliquer les filtres</button>
-    <button type="button" id="reset-btn">Réinitialiser</button>
-  </form>
+        <button type="submit">Appliquer les filtres</button>
+        <button type="button" id="reset-btn">Réinitialiser</button>
+    </form>
 </section>
 
 <section>
-  <h2>Annonces</h2>
-  <div id="ads"></div>
+    <h2>Annonces</h2>
+    <div id="ads"></div>
 </section>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.getElementById("predict-btn").onclick = async () => {
-    const payload = {
-        city: "Nîmes",
-        zipcode: "30000",
-        region: "Occitanie",
-        category: "Ventes",
-        type: "Appartement"
+    const messageEl = document.getElementById('message');
+    const adsContainer = document.getElementById('ads');
+    
+    document.getElementById('pipeline-btn').onclick = async () => {
+        messageEl.textContent = "Pipeline en cours…";
+
+        try {
+            const res = await fetch('/pipeline', { method: 'POST' });
+            const data = await res.json();
+
+            if (!res.ok) {
+                messageEl.textContent = data.detail || "Erreur lors du pipeline.";
+                return;
+            }
+
+            messageEl.textContent = "Pipeline terminé ✔";
+            console.log("Staging :", data.staging_file);
+            console.log("Clean :", data.clean_file);
+            console.log("Rapport qualité :", data.quality_report);
+
+        } catch (err) {
+            console.error(err);
+            messageEl.textContent = "Erreur lors du pipeline.";
+        }
     };
 
-    const res = await fetch("/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    });
+    document.getElementById('export-btn').onclick = async () => {
+        messageEl.textContent = "Export en cours…";
 
-    const data = await res.json();
-    alert("Prix estimé : " + data.predicted_price + " €");
-};
+        const res = await fetch('/export', {method: 'POST'});
+        const data = await res.json();
 
-  const messageEl = document.getElementById('message');
-  const adsContainer = document.getElementById('ads');
+        if (res.ok) {
+            messageEl.textContent = "Export terminé ✔ Fichier : " + data.file;
+        } else {
+            messageEl.textContent = "Erreur lors de l’export.";
+        }
+    };
 
-  async function loadAds(filters = {}) {
-    try {
-      const params = new URLSearchParams(filters).toString();
-      const res = await fetch(`/ads?${params}`);
-      const data = await res.json();
-      renderAds(data.ads);
-    } catch (err) {
-      console.error(err);
-      messageEl.textContent = 'Erreur lors du chargement des annonces.';
-    }
-  }
-
-  function renderAds(ads) {
-    adsContainer.innerHTML = '';
-    if (!ads || ads.length === 0) {
-      adsContainer.innerHTML = '<p>Aucune annonce trouvée.</p>';
-      return;
+    async function loadAds(filters = {}) {
+        try {
+            const params = new URLSearchParams(filters).toString();
+            const res = await fetch(`/ads?${params}`);
+            const data = await res.json();
+            renderAds(data.ads);
+        } catch (err) {
+            console.error(err);
+            messageEl.textContent = 'Erreur lors du chargement des annonces.';
+        }
     }
 
-    for (const ad of ads) {
-      const div = document.createElement('div');
-      div.className = 'ad-card';
+    function renderAds(ads) {
+        adsContainer.innerHTML = '';
+        if (!ads || ads.length === 0) {
+            adsContainer.innerHTML = '<p>Aucune annonce trouvée.</p>';
+            return;
+        }
 
-      const suspiciousBadge = ad.suspicious
-        ? `<span class="badge badge-suspicious">Suspect</span>`
-        : '';
+        for (const ad of ads) {
+            const div = document.createElement('div');
+            div.className = 'ad-card';
 
-      const scoreDisplay = (ad.score !== undefined && ad.score !== null)
-        ? `<small>Score : ${ad.score}/5</small><br>`
-        : '';
+            const suspiciousBadge = ad.suspicious
+                    ? `<span class="badge badge-suspicious">Suspect</span>`
+                    : '';
 
-    div.innerHTML = `
+            const scoreDisplay = (ad.score !== undefined && ad.score !== null)
+                    ? `<small>Score : ${ad.score}/5</small><br>`
+                    : '';
+
+            div.innerHTML = `
       <div>
         <strong>${ad.title}</strong> ${suspiciousBadge}<br>
-        ${ad.price ? `${ad.price} €` : 'Prix non communiqué'}<br>
+        ${ad.price ? `${ad.price} €`
+        :
+            'Prix non communiqué'
+        }
+        <br>
+        ${ad.surface ? `${ad.surface}` : 'Surface NC'}<br>
         ${ad.city || 'Ville inconnue'} - ${ad.zipcode || 'CP inconnue'}<br>
         <small>${ad.category || ''} / ${ad.type || ''}</small><br>
         ${scoreDisplay}
-        <a href="${ad.url}" target="_blank">Voir l'annonce</a>
-      </div>
-      ${ad.image_url ? `<img src="${ad.image_url}" alt="${ad.title}" class="ad-image">` : ''}
-    `;
-      adsContainer.appendChild(div);
-    }
-  }
+            <a href="${ad.url}" target="_blank">Voir l'annonce</a>
+        </div>
+                ${ad.image_url ? `<img src="${ad.image_url}" alt="${ad.title}" class="ad-image">` : ''}
+        `;
+        adsContainer.appendChild(div);
+        }
+        }
 
-          let scrapInterval = null;
+        let scrapInterval = null;
 
-          document.getElementById('scrap-btn').onclick = async () => {
-              messageEl.textContent = 'Scraping démarré...';
+        document.getElementById('scrap-btn').onclick = async () => {
+            messageEl.textContent = 'Scraping démarré...';
 
-              try {
-              const res = await fetch('/scrap', {method: 'POST'});
-              const data = await res.json();
+            try {
+            const res = await fetch('/scrap', {method: 'POST'});
+            const data = await res.json();
 
-              if (!res.ok) {
-              messageEl.textContent = data.detail || 'Une erreur est survenue.';
-              return;
-          }
+            if (!res.ok) {
+            messageEl.textContent = data.detail || 'Une erreur est survenue.';
+            return;
+        }
 
-              messageEl.textContent = "Scraping en cours…";
+            messageEl.textContent = "Scraping en cours…";
 
-              // 🔥 Vérification du statut toutes les 1s
-              scrapInterval = setInterval(async () => {
-              const statusRes = await fetch('/scrap/status');
-              const statusData = await statusRes.json();
+            // 🔥 Vérification du statut toutes les 1s
+            scrapInterval = setInterval(async () => {
+            const statusRes = await fetch('/scrap/status');
+            const statusData = await statusRes.json();
 
-              if (!statusData.scraping) {
-              // ✔ Scrap terminé
-              clearInterval(scrapInterval);
-              scrapInterval = null;
+            if (!statusData.scraping) {
+            // ✔ Scrap terminé
+            clearInterval(scrapInterval);
+            scrapInterval = null;
 
-              messageEl.textContent = "Scraping terminé, mise à jour…";
+            messageEl.textContent = "Scraping terminé, mise à jour…";
 
-              await loadAds(); // 🔥 Recharge automatique des annonces
+            await loadAds(); // 🔥 Recharge automatique des annonces
 
-              messageEl.textContent = "Annonces mises à jour ✔";
-          }
-          }, 1000);
+            messageEl.textContent = "Annonces mises à jour ✔";
+        }
+        }, 1000);
 
-          } catch (err) {
-              console.error(err);
-              messageEl.textContent = 'Erreur lors du lancement du scrap.';
-          }
-          };
+        } catch (err) {
+            console.error(err);
+            messageEl.textContent = 'Erreur lors du lancement du scrap.';
+        }
+        };
 
-  document.getElementById('status-btn').onclick = async () => {
-    try {
-      const res = await fetch('/scrap/status');
-      const data = await res.json();
-      messageEl.textContent = data.scraping
-        ? 'Scraping en cours...'
-        : 'Aucun scraping en cours.';
-    } catch {
-      messageEl.textContent = 'Erreur lors de la récupération du statut.';
-    }
-  };
+        document.getElementById('status-btn').onclick = async () => {
+            try {
+            const res = await fetch('/scrap/status');
+            const data = await res.json();
+            messageEl.textContent = data.scraping
+            ? 'Scraping en cours...'
+            : 'Aucun scraping en cours.';
+        } catch {
+            messageEl.textContent = 'Erreur lors de la récupération du statut.';
+        }
+        };
 
-  document.getElementById('filter-form').onsubmit = (e) => {
-    e.preventDefault();
+        document.getElementById('filter-form').onsubmit = (e) => {
+            e.preventDefault();
 
-    const filters = {
-      city: document.getElementById('city').value.trim(),
-      min_price: document.getElementById('min_price').value,
-      max_price: document.getElementById('max_price').value,
-    };
+            const filters = {
+            city: document.getElementById('city').value.trim(),
+            min_price: document.getElementById('min_price').value,
+            max_price: document.getElementById('max_price').value,
+        };
 
-    const suspiciousCheckbox = document.getElementById('suspicious_only');
-    const orderScoreCheckbox = document.getElementById('order_by_score');
+            const suspiciousCheckbox = document.getElementById('suspicious_only');
+            const orderScoreCheckbox = document.getElementById('order_by_score');
 
-    if (suspiciousCheckbox.checked) {
-      filters.suspicious_only = true;
-    }
-    if (orderScoreCheckbox.checked) {
-      filters.order_by_score = true;
-    }
+            if (suspiciousCheckbox.checked) {
+            filters.suspicious_only = true;
+        }
+            if (orderScoreCheckbox.checked) {
+            filters.order_by_score = true;
+        }
 
-    loadAds(filters);
-  };
+            loadAds(filters);
+        };
 
-  document.getElementById('reset-btn').onclick = () => {
-    document.getElementById('filter-form').reset();
-    loadAds();
-  };
+        document.getElementById('reset-btn').onclick = () => {
+            document.getElementById('filter-form').reset();
+            loadAds();
+        };
 
-  // Chargement initial
-  loadAds();
+        // Chargement initial
+        loadAds();
 </script>
 {% endblock %}
+```
