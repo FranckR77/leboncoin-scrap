@@ -79,19 +79,6 @@
         }
     };
 
-    document.getElementById('export-btn').onclick = async () => {
-        messageEl.textContent = "Export en cours…";
-
-        const res = await fetch('/export', {method: 'POST'});
-        const data = await res.json();
-
-        if (res.ok) {
-            messageEl.textContent = "Export terminé ✔ Fichier : " + data.file;
-        } else {
-            messageEl.textContent = "Erreur lors de l’export.";
-        }
-    };
-
     async function loadAds(filters = {}) {
         try {
             const params = new URLSearchParams(filters).toString();
