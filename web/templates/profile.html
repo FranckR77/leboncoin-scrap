@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Profil{% endblock %}
+
+{% block content %}
+<h2>Mon Profil</h2>
+
+<div class="profile-box">
+    <p><strong>Nom d'utilisateur :</strong> {{ user.username }}</p>
+    <p><strong>Créé le :</strong> {{ user.created_at }}</p>
+</div>
+
+<h3>Mes favoris</h3>
+
+{% if favorites %}
+    {% for ad in favorites %}
+        <div class="ad-card">
+            <strong>{{ ad.title }}</strong><br>
+            {{ ad.price }} €<br>
+            {{ ad.city }} - {{ ad.zipcode }}<br>
+            <a href="{{ ad.url }}" target="_blank">Voir l'annonce</a>
+        </div>
+    {% endfor %}
+{% else %}
+    <p>Aucun favori pour le moment.</p>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Créer un compte{% endblock %}
+
+{% block content %}
+<h2>Créer un compte</h2>
+
+<form action="/register" method="post" class="login-form">
+    <label>
+        Nom d'utilisateur :
+        <input type="text" name="username" required>
+    </label>
+
+    <label>
+        Mot de passe :
+        <input type="password" name="password" required>
+    </label>
+
+    <button type="submit">Créer le compte</button>
+
+    {% if request.query_params.get("error") %}
+        <p style="color:red">❌ Nom d'utilisateur déjà pris</p>
+    {% endif %}
+</form>
+
+<p style="margin-top: 1rem;">
+    Déjà un compte ?
+    <a href="/login">Se connecter</a>
+</p>
+{% endblock %}
