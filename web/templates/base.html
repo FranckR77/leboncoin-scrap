@@ -457,9 +457,12 @@
 
     {% if request.session.get("user") %}
     <div class="navbar-right">
+
+        {% if request.url.path != "/profile" %}
         <form action="/profile" method="get">
             <button type="submit" class="btn btn-nav">Profil</button>
         </form>
+        {% endif %}
 
         <form action="/logout" method="get">
             <button type="submit" class="btn btn-nav logout">Déconnexion</button>
