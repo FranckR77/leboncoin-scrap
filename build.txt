@@ -1,0 +1,77 @@
+time="2026-03-26T15:02:24+01:00" level=warning msg="C:\\DORANCO\\MASTER 1\\Scrapping LeBoncoin\\leboncoin-scrap\\docker-compose.yaml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Image leboncoin-scrap-api Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 575B 0.2s done
+#1 DONE 0.2s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 624B 0.0s done
+#2 DONE 0.1s
+
+#3 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#3 DONE 0.8s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4a43a54dd1fedceb30ba47e76cfcf2b47304f4161c0caeac2db1c61804ea3c91
+#4 resolve docker.io/docker/dockerfile:1@sha256:4a43a54dd1fedceb30ba47e76cfcf2b47304f4161c0caeac2db1c61804ea3c91 0.1s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/python:3.11-slim
+#5 DONE 0.4s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 2B 0.0s done
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 12.30kB 0.1s done
+#7 DONE 0.1s
+
+#8 [1/6] FROM docker.io/library/python:3.11-slim@sha256:9358444059ed78e2975ada2c189f1c1a3144a5dab6f35bff8c981afb38946634
+#8 resolve docker.io/library/python:3.11-slim@sha256:9358444059ed78e2975ada2c189f1c1a3144a5dab6f35bff8c981afb38946634
+#8 resolve docker.io/library/python:3.11-slim@sha256:9358444059ed78e2975ada2c189f1c1a3144a5dab6f35bff8c981afb38946634 0.1s done
+#8 DONE 0.1s
+
+#9 [2/6] WORKDIR /app
+#9 CACHED
+
+#10 [3/6] RUN apt-get update && apt-get install -y   build-essential   libxml2-dev   libxslt-dev   && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [4/6] COPY requirements.txt .
+#11 CACHED
+
+#12 [5/6] RUN pip install --no-cache-dir -r requirements.txt
+#12 6.234 ERROR: Invalid requirement: 'scikit-learnj\x00o\x00b\x00l\x00i\x00b\x00' (from line 31 of requirements.txt)
+#12 6.582 
+#12 6.582 [notice] A new release of pip is available: 24.0 -> 26.0.1
+#12 6.582 [notice] To update, run: pip install --upgrade pip
+#12 ERROR: process "/bin/sh -c pip install --no-cache-dir -r requirements.txt" did not complete successfully: exit code: 1
+------
+ > [5/6] RUN pip install --no-cache-dir -r requirements.txt:
+6.234 ERROR: Invalid requirement: 'scikit-learnj\x00o\x00b\x00l\x00i\x00b\x00' (from line 31 of requirements.txt)
+6.582 
+6.582 [notice] A new release of pip is available: 24.0 -> 26.0.1
+6.582 [notice] To update, run: pip install --upgrade pip
+------
+Dockerfile:19
+
+--------------------
+
+  17 |     # Install Python deps
+
+  18 |     COPY requirements.txt .
+
+  19 | >>> RUN pip install --no-cache-dir -r requirements.txt
+
+  20 |     
+
+  21 |     # Copy project
+
+--------------------
+
+failed to solve: process "/bin/sh -c pip install --no-cache-dir -r requirements.txt" did not complete successfully: exit code: 1
+
+
+
+View build details: docker-desktop://dashboard/build/default/default/rnx64k7294lvktwhkx35b3516
+
