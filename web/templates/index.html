@@ -208,11 +208,11 @@
             ${ad.city} - ${ad.zipcode}<br>
             <small>${ad.category} / ${ad.type}</small><br>
             <a href="${ad.url}" target="_blank">Voir l'annonce</a><br>
-
-            ${favButton}
         </div>
-
+        <div>
+            ${favButton}<br>
             ${ad.image_url ? `<img src="${ad.image_url}" class="ad-image">` : ''}
+        </div>
         `;
         adsContainer.appendChild(div);
         }

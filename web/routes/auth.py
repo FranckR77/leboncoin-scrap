@@ -12,7 +12,17 @@ def register_page(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
 @router.post("/register")
-def register(request: Request, username: str = Form(...), password: str = Form(...)):
+def register(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(...)
+):
+    # Vérif mots de passe identiques
+    if password != confirm_password:
+        return RedirectResponse("/register?error=password", status_code=302)
+
+    # Hash du mot de passe
     hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
     try:
@@ -23,8 +33,9 @@ def register(request: Request, username: str = Form(...), password: str = Form(.
                     (username, hashed)
                 )
             conn.commit()
+
     except Exception:
-        return RedirectResponse("/register?error=1", status_code=302)
+        return RedirectResponse("/register?error=exists", status_code=302)
 
     return RedirectResponse("/login", status_code=302)
 
