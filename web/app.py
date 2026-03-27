@@ -7,11 +7,10 @@ from web.routes import ads, scrap
 from web.routes import export
 from web.routes import clean
 from web.routes import pipeline
+from web.routes import predict
+from web.routes import stats
 
 app = FastAPI()
-
-# Mount static files
-#app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
 # Templates (HTML)
 templates = Jinja2Templates(directory="web/templates")
@@ -29,6 +28,9 @@ app.include_router(scrap.router, prefix="/scrap", tags=["Scraper"])
 app.include_router(export.router, prefix="/export", tags=["Export"])
 app.include_router(clean.router, prefix="/clean", tags=["Clean"])
 app.include_router(pipeline.router, prefix="/pipeline", tags=["Pipeline"])
+app.include_router(predict.router, prefix="/predict", tags=["Prediction"])
+app.include_router(stats.router, prefix="/stats", tags=["Stats"])
+
 @app.get("/legal/cgu", response_class=HTMLResponse)
 async def legal_cgu(request: Request):
     return templates.TemplateResponse("cgu.html", {"request": request})
