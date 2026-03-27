@@ -3,26 +3,29 @@
 {% block title %}Connexion{% endblock %}
 
 {% block content %}
-<h2>Connexion</h2>
 
-<form action="/login" method="post" class="login-form">
-    <label>
-        Nom d'utilisateur :
-        <input type="text" name="username" required>
-    </label>
+<div class="auth-container">
+    <h2>Connexion</h2>
 
-    <label>
-        Mot de passe :
-        <input type="password" name="password" required>
-    </label>
+    <form action="/login" method="post" class="auth-form">
 
-    <button type="submit">Se connecter</button>
-</form>
+        <div class="form-group">
+            <label for="username">Nom d'utilisateur</label>
+            <input type="text" id="username" name="username" required>
+        </div>
 
+        <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <input type="password" id="password" name="password" required>
+        </div>
 
-<p style="margin-top: 1rem;">
-    Pas encore de compte ?
-    <a href="/register">Créer un compte</a>
-</p>
+        <button type="submit" class="btn" style="width: 100%;">Se connecter</button>
+    </form>
+
+    <p class="auth-switch">
+        Pas encore de compte ?
+        <a href="/register">Créer un compte</a>
+    </p>
+</div>
 
 {% endblock %}

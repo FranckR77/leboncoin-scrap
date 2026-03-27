@@ -1,10 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard — LBC Analytics{% endblock %}
+{% block title %}LEBONCOIN Scraper{% endblock %}
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+    .navbar-right {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px; /* espace entre Profil et Déconnexion */
+    }
+
+    .navbar-right form {
+        margin: 0; /* important sinon les formulaires prennent de la place inutilement */
+    }
     /* Styling for the Prediction Section */
     .predict-box {
         background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0.15) 100%);
@@ -302,6 +312,9 @@
             }
         }
     }
+        const favButton = ad.is_favorite
+            ? `<button class="btn fav-btn remove" onclick="removeFavorite(${ad.id})">Retirer des favoris</button>`
+            : `<button class="btn fav-btn add" onclick="addToFavorites(${ad.id})">Ajouter aux favoris</button>`;
 
     // --- PREDICTION HANDLER ---
     const predictForm = document.getElementById('predict-form');
@@ -404,6 +417,11 @@
             adsContainer.innerHTML = '<p style="color: var(--text-muted); grid-column: 1 / -1;">Aucune annonce trouvée correspondant à ces critères.</p>';
             return;
         }
+                <div class="card-price">${priceFormatted}</div>
+                <div class="card-meta">
+                    <span style="font-weight:600; color:var(--secondary);">${ad.surface || '?'}</span> •
+                    <span style="color:var(--text-muted);">${ad.city || 'Ville inconnue'}</span>
+                </div>
 
         for (const ad of ads) {
             const div = document.createElement('div');

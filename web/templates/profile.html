@@ -13,64 +13,63 @@
 <h3>Mes favoris</h3>
 
 {% if favorites %}
-{% for ad in favorites %}
-<div class="ad-card">
+<div class="favorites-list">
+    {% for ad in favorites %}
+    <div class="favorite-box">
 
-    <div>
-        <strong>{{ ad.title }}</strong><br>
-        {{ ad.price }} €<br>
-        {{ ad.city }} - {{ ad.zipcode }}<br>
-    </div>
+        <div class="favorite-left">
+            <h4>{{ ad.title }}</h4>
+            <p class="fav-price">{{ ad.price }} €</p>
+            <p class="fav-meta">{{ ad.city }} — {{ ad.zipcode }}</p>
+        </div>
 
-    <!-- Colonne actions -->
-    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+        <div class="favorite-right">
+            <a href="${ad.url}" target="_blank" class="btn btn-outline">Voir ↗</a>
 
-        <a href="{{ ad.url }}" target="_blank" style="color: var(--secondary); font-weight: bold;">
-            Voir l'annonce
-        </a>
-
-        <button
-                class="fav-btn remove"
-                onclick="removeFavorite({{ ad.id }})"
-        >
-            Retirer des favoris
-        </button>
+            <button class="btn" onclick="removeFavorite({{ ad.id }})">
+                Retirer des favoris
+            </button>
+        </div>
 
     </div>
-
+    {% endfor %}
 </div>
-{% endfor %}
+
 {% else %}
 <p>Aucun favori pour le moment.</p>
 {% endif %}
 
 <h3>Changer le mot de passe</h3>
 
-<form action="/profile/change-password" method="post" class="login-form">
+<form action="/profile/change-password" method="post" class="auth-form">
 
-    <label>
-        Ancien mot de passe :
-        <input type="password" name="old_password" required>
-    </label>
+    <div class="form-group">
+        <label for="old_password">Ancien mot de passe</label>
+        <input type="password" id="old_password" name="old_password" required>
+    </div>
 
-    <label>
-        Nouveau mot de passe :
-        <input type="password" name="new_password" required>
-    </label>
+    <div class="form-group">
+        <label for="new_password">Nouveau mot de passe</label>
+        <input type="password" id="new_password" name="new_password" required>
+    </div>
 
-    <label>
-        Confirmer le nouveau mot de passe :
-        <input type="password" name="confirm_password" required>
-    </label>
+    <div class="form-group">
+        <label for="confirm_password">Confirmer le nouveau mot de passe</label>
+        <input type="password" id="confirm_password" name="confirm_password" required>
+    </div>
 
-    <button type="submit">Mettre à jour</button>
+    <button type="submit" class="btn" style="width:100%;">Mettre à jour</button>
 
     {% if request.query_params.get("error") == "old" %}
-        <p style="color:red">❌ L'ancien mot de passe est incorrect</p>
+        <p class="auth-error">❌ L'ancien mot de passe est incorrect</p>
+
     {% elif request.query_params.get("error") == "confirm" %}
-        <p style="color:red">❌ Les mots de passe ne correspondent pas</p>
+        <p class="auth-error">❌ Les mots de passe ne correspondent pas</p>
+
     {% elif request.query_params.get("success") %}
-        <p style="color:green">✔ Mot de passe mis à jour avec succès</p>
+        <p style="color:#10b981; text-align:center; margin-top:1rem;">
+            ✔ Mot de passe mis à jour avec succès
+        </p>
     {% endif %}
 </form>
 
