@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Profil{% endblock %}
+
+{% block content %}
+<h2>Mon Profil</h2>
+
+<div class="profile-box">
+    <p><strong>Nom d'utilisateur :</strong> {{ user.username }}</p>
+    <p><strong>Créé le :</strong> {{ user.created_at }}</p>
+</div>
+
+<h3>Mes favoris</h3>
+
+{% if favorites %}
+{% for ad in favorites %}
+<div class="ad-card">
+
+    <div>
+        <strong>{{ ad.title }}</strong><br>
+        {{ ad.price }} €<br>
+        {{ ad.city }} - {{ ad.zipcode }}<br>
+    </div>
+
+    <!-- Colonne actions -->
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+
+        <a href="{{ ad.url }}" target="_blank" style="color: var(--secondary); font-weight: bold;">
+            Voir l'annonce
+        </a>
+
+        <button
+                class="fav-btn remove"
+                onclick="removeFavorite({{ ad.id }})"
+        >
+            Retirer des favoris
+        </button>
+
+    </div>
+
+</div>
+{% endfor %}
+{% else %}
+<p>Aucun favori pour le moment.</p>
+{% endif %}
+
+<h3>Changer le mot de passe</h3>
+
+<form action="/profile/change-password" method="post" class="login-form">
+
+    <label>
+        Ancien mot de passe :
+        <input type="password" name="old_password" required>
+    </label>
+
+    <label>
+        Nouveau mot de passe :
+        <input type="password" name="new_password" required>
+    </label>
+
+    <label>
+        Confirmer le nouveau mot de passe :
+        <input type="password" name="confirm_password" required>
+    </label>
+
+    <button type="submit">Mettre à jour</button>
+
+    {% if request.query_params.get("error") == "old" %}
+        <p style="color:red">❌ L'ancien mot de passe est incorrect</p>
+    {% elif request.query_params.get("error") == "confirm" %}
+        <p style="color:red">❌ Les mots de passe ne correspondent pas</p>
+    {% elif request.query_params.get("success") %}
+        <p style="color:green">✔ Mot de passe mis à jour avec succès</p>
+    {% endif %}
+</form>
+
+<script>
+async function removeFavorite(ad_id) {
+    const res = await fetch(`/favorites/${ad_id}`, {
+        method: "DELETE"
+    });
+
+    const data = await res.json();
+    alert(data.message);
+
+    // Recharge la page pour actualiser la liste
+    window.location.reload();
+}
+</script>
+
+{% endblock %}
