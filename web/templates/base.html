@@ -236,6 +236,7 @@
     }
 
     .ad-image {
+        margin-top: 10px;
         height: 140px;
         width: auto;
         border-radius: var(--radius);
@@ -269,6 +270,40 @@
     footer a {
         color: var(--secondary);
     }
+
+    .pagination {
+        margin-top: 1.5rem;
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .pagination button {
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        border: 1px solid var(--secondary);
+        background: var(--bg);
+        color: var(--secondary);
+        cursor: pointer;
+    }
+
+    .pagination button.active {
+        background: var(--secondary);
+        color: white;
+        font-weight: bold;
+    }
+
+    .pagination span {
+        padding: 0.4rem;
+        opacity: 0.6;
+    }
+
+    .pagination button.active {
+        background: var(--secondary);
+        color: white;
+        font-weight: bold;
+    }
   </style>
 
   {% block extra_head %}{% endblock %}
@@ -276,7 +311,20 @@
 <body>
 
 <header>
-    <h1>Leboncoin scraper</h1>
+    {% if request.session.get("user") %}
+        <div style="float:right; display:flex; gap:10px;">
+            <form action="/profile" method="get" style="float:right; margin-left: 1rem;">
+                <button type="submit">Profil</button>
+            </form>
+
+            <form action="/logout" method="get" style="float:right; margin-left: 1rem;">
+                <button type="submit">Déconnexion</button>
+            </form>
+        </div>
+    {% endif %}
+    <h1>
+        <a href="/">Leboncoin scraper</a>
+    </h1>
     <p>Interface de gestion du scraping et affichage des annonces</p>
 </header>
 
@@ -286,8 +334,8 @@
 
 <footer>
     <small>
-        /legal/cguConditions d'utilisation</a> •
-        /legal/privacyPolitique de confidentialité</a><br>
+        <a href="/legal/cgu">Conditions d'utilisation</a> •
+        <a href="/legal/privacy">Politique de confidentialité</a><br>
         <span style="color:#666;">Projet interne — collecte de données publiques avec anonymisation.</span>
     </small>
 </footer>

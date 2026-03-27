@@ -47,6 +47,7 @@
 <section>
     <h2>Annonces</h2>
     <div id="ads"></div>
+    <div id="pagination" class="pagination"></div>
 </section>
 
 {% endblock %}
@@ -79,15 +80,100 @@
         }
     };
 
-    async function loadAds(filters = {}) {
-        try {
-            const params = new URLSearchParams(filters).toString();
-            const res = await fetch(`/ads?${params}`);
-            const data = await res.json();
-            renderAds(data.ads);
-        } catch (err) {
-            console.error(err);
-            messageEl.textContent = 'Erreur lors du chargement des annonces.';
+    async function addToFavorites(ad_id) {
+        const res = await fetch(`/favorites/${ad_id}`, {method: "POST"});
+        const data = await res.json();
+        alert(data.message);
+        loadAds(); // rafraîchir l'affichage
+    }
+
+    async function removeFavorite(ad_id) {
+        const res = await fetch(`/favorites/${ad_id}`, {method: "DELETE"});
+        const data = await res.json();
+        alert(data.message);
+        loadAds(); // rafraîchir l'affichage
+    }
+
+    async function loadAds(filters = {}, page = 1) {
+        filters.page = page;  // on injecte la page dans les paramètres
+
+        const params = new URLSearchParams(filters).toString();
+        const res = await fetch(`/ads?${params}`);
+        const data = await res.json();
+
+        renderAds(data.ads);
+        renderPagination(data, filters);
+    }
+
+    function renderPagination(data, filters = {}) {
+        const paginationEl = document.getElementById('pagination');
+        paginationEl.innerHTML = '';
+
+        const current = data.page;
+        const total = data.total_pages;
+
+        if (total <= 1) return;
+
+        // Bouton Précédent
+        if (current > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = "❮";
+            prevBtn.onclick = () => loadAds(filters, current - 1);
+            paginationEl.appendChild(prevBtn);
+        }
+
+        // Si page > 2, afficher "..."
+        if (current > 2) {
+            const firstBtn = document.createElement('button');
+            firstBtn.textContent = "1";
+            firstBtn.onclick = () => loadAds(filters, 1);
+            paginationEl.appendChild(firstBtn);
+
+            const dots = document.createElement('span');
+            dots.textContent = "...";
+            paginationEl.appendChild(dots);
+        }
+
+        // Page active - 1
+        if (current > 1) {
+            const prevPage = document.createElement('button');
+            prevPage.textContent = current - 1;
+            prevPage.onclick = () => loadAds(filters, current - 1);
+            paginationEl.appendChild(prevPage);
+        }
+
+        // Page active
+        const currentBtn = document.createElement('button');
+        currentBtn.textContent = current;
+        currentBtn.classList.add("active");
+        paginationEl.appendChild(currentBtn);
+
+        // Page active + 1
+        if (current < total) {
+            const nextPage = document.createElement('button');
+            nextPage.textContent = current + 1;
+            nextPage.onclick = () => loadAds(filters, current + 1);
+            paginationEl.appendChild(nextPage);
+        }
+
+        // "..." avant la dernière page
+        if (current < total - 1) {
+            const dots = document.createElement('span');
+            dots.textContent = "...";
+            paginationEl.appendChild(dots);
+
+            const lastBtn = document.createElement('button');
+            lastBtn.textContent = total;
+            lastBtn.onclick = () => loadAds(filters, total);
+            paginationEl.appendChild(lastBtn);
+        }
+
+        // Bouton Suivant
+        if (current < total) {
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = "❯";
+            nextBtn.onclick = () => loadAds(filters, current + 1);
+            paginationEl.appendChild(nextBtn);
         }
     }
 
@@ -110,21 +196,23 @@
                     ? `<small>Score : ${ad.score}/5</small><br>`
                     : '';
 
-            div.innerHTML = `
-      <div>
-        <strong>${ad.title}</strong> ${suspiciousBadge}<br>
-        ${ad.price ? `${ad.price} €`
-        :
-            'Prix non communiqué'
-        }
-        <br>
-        ${ad.surface ? `${ad.surface}` : 'Surface NC'}<br>
-        ${ad.city || 'Ville inconnue'} - ${ad.zipcode || 'CP inconnue'}<br>
-        <small>${ad.category || ''} / ${ad.type || ''}</small><br>
-        ${scoreDisplay}
-            <a href="${ad.url}" target="_blank">Voir l'annonce</a>
+        const favButton = ad.is_favorite
+            ? `<button class="fav-btn remove" onclick="removeFavorite(${ad.id})">Retirer des favoris</button>`
+            : `<button class="fav-btn add" onclick="addToFavorites(${ad.id})">Ajouter aux favoris</button>`;
+
+        div.innerHTML = `
+        <div>
+            <strong>${ad.title}</strong><br>
+            ${ad.price ? `${ad.price} €` : 'Prix non communiqué'}<br>
+            ${ad.surface ? `${ad.surface}` : 'Surface NC'}<br>
+            ${ad.city} - ${ad.zipcode}<br>
+            <small>${ad.category} / ${ad.type}</small><br>
+            <a href="${ad.url}" target="_blank">Voir l'annonce</a><br>
         </div>
-                ${ad.image_url ? `<img src="${ad.image_url}" alt="${ad.title}" class="ad-image">` : ''}
+        <div>
+            ${favButton}<br>
+            ${ad.image_url ? `<img src="${ad.image_url}" class="ad-image">` : ''}
+        </div>
         `;
         adsContainer.appendChild(div);
         }
