@@ -13,33 +13,28 @@
 <h3>Mes favoris</h3>
 
 {% if favorites %}
-{% for ad in favorites %}
-<div class="ad-card">
+<div class="favorites-list">
+    {% for ad in favorites %}
+    <div class="favorite-box">
 
-    <div>
-        <strong>{{ ad.title }}</strong><br>
-        {{ ad.price }} €<br>
-        {{ ad.city }} - {{ ad.zipcode }}<br>
-    </div>
+        <div class="favorite-left">
+            <h4>{{ ad.title }}</h4>
+            <p class="fav-price">{{ ad.price }} €</p>
+            <p class="fav-meta">{{ ad.city }} — {{ ad.zipcode }}</p>
+        </div>
 
-    <!-- Colonne actions -->
-    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+        <div class="favorite-right">
+            <a href="${ad.url}" target="_blank" class="btn btn-outline">Voir ↗</a>
 
-        <a href="{{ ad.url }}" target="_blank" style="color: var(--secondary); font-weight: bold;">
-            Voir l'annonce
-        </a>
-
-        <button
-                class="fav-btn remove"
-                onclick="removeFavorite({{ ad.id }})"
-        >
-            Retirer des favoris
-        </button>
+            <button class="btn" onclick="removeFavorite({{ ad.id }})">
+                Retirer des favoris
+            </button>
+        </div>
 
     </div>
-
+    {% endfor %}
 </div>
-{% endfor %}
+
 {% else %}
 <p>Aucun favori pour le moment.</p>
 {% endif %}

@@ -442,6 +442,68 @@
         color: white;
         font-weight: bold;
     }
+
+    /* ============================
+       FAVORITES BOXES
+    ============================ */
+    .favorites-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+        margin-bottom: 2rem;
+    }
+
+    .favorite-box {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition);
+    }
+
+    .favorite-box:hover {
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary);
+        transform: translateY(-3px);
+    }
+
+    .favorite-left h4 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: .4rem;
+    }
+
+    .fav-price {
+        color: var(--primary);
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: .4rem;
+    }
+
+    .fav-meta {
+        font-size: .9rem;
+        color: var(--text-muted);
+    }
+
+    .favorite-right {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        align-items: flex-end;
+    }
+
+    .favorite-right a {
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    .favorite-right a:hover {
+        color: var(--primary-hover);
+    }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
