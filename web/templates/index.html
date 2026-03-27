@@ -5,6 +5,16 @@
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+    .navbar-right {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px; /* espace entre Profil et Déconnexion */
+    }
+
+    .navbar-right form {
+        margin: 0; /* important sinon les formulaires prennent de la place inutilement */
+    }
     /* Styling for the Prediction Section */
     .predict-box {
         background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0.15) 100%);
@@ -295,8 +305,8 @@ function renderAds(ads) {
             : '';
 
         const favButton = ad.is_favorite
-            ? `<button class="fav-btn remove" onclick="removeFavorite(${ad.id})">Retirer des favoris</button>`
-            : `<button class="fav-btn add" onclick="addToFavorites(${ad.id})">Ajouter aux favoris</button>`;
+            ? `<button class="btn fav-btn remove" onclick="removeFavorite(${ad.id})">Retirer des favoris</button>`
+            : `<button class="btn fav-btn add" onclick="addToFavorites(${ad.id})">Ajouter aux favoris</button>`;
 
         const imageHtml = ad.image_url
             ? `<div class="card-img-wrapper"><img src="${ad.image_url}" class="card-img"></div>`

@@ -46,31 +46,35 @@
 
 <h3>Changer le mot de passe</h3>
 
-<form action="/profile/change-password" method="post" class="login-form">
+<form action="/profile/change-password" method="post" class="auth-form">
 
-    <label>
-        Ancien mot de passe :
-        <input type="password" name="old_password" required>
-    </label>
+    <div class="form-group">
+        <label for="old_password">Ancien mot de passe</label>
+        <input type="password" id="old_password" name="old_password" required>
+    </div>
 
-    <label>
-        Nouveau mot de passe :
-        <input type="password" name="new_password" required>
-    </label>
+    <div class="form-group">
+        <label for="new_password">Nouveau mot de passe</label>
+        <input type="password" id="new_password" name="new_password" required>
+    </div>
 
-    <label>
-        Confirmer le nouveau mot de passe :
-        <input type="password" name="confirm_password" required>
-    </label>
+    <div class="form-group">
+        <label for="confirm_password">Confirmer le nouveau mot de passe</label>
+        <input type="password" id="confirm_password" name="confirm_password" required>
+    </div>
 
-    <button type="submit">Mettre à jour</button>
+    <button type="submit" class="btn" style="width:100%;">Mettre à jour</button>
 
     {% if request.query_params.get("error") == "old" %}
-        <p style="color:red">❌ L'ancien mot de passe est incorrect</p>
+        <p class="auth-error">❌ L'ancien mot de passe est incorrect</p>
+
     {% elif request.query_params.get("error") == "confirm" %}
-        <p style="color:red">❌ Les mots de passe ne correspondent pas</p>
+        <p class="auth-error">❌ Les mots de passe ne correspondent pas</p>
+
     {% elif request.query_params.get("success") %}
-        <p style="color:green">✔ Mot de passe mis à jour avec succès</p>
+        <p style="color:#10b981; text-align:center; margin-top:1rem;">
+            ✔ Mot de passe mis à jour avec succès
+        </p>
     {% endif %}
 </form>
 
