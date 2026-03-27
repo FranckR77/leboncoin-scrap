@@ -9,7 +9,7 @@
     .predict-box {
         background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0.15) 100%);
         border: 1px solid rgba(37, 99, 235, 0.2);
-    }
+    }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
     .predict-box h2 {
         color: var(--secondary);
     }
@@ -124,8 +124,18 @@
             <input type="number" id="pred_surface" required min="9" placeholder="ex: 45">
         </div>
         <div class="form-group">
+            <label>Code Postal</label>
+            <input type="text" id="pred_zipcode" required maxlength="5" placeholder="ex: 75001" oninput="handleZipcode(this.value)">
+        </div>
+        <div class="form-group">
+            <label>Région</label>
+            <input type="text" id="pred_region" readonly placeholder="Auto-détecté" style="background: rgba(255,255,255,0.05); cursor: not-allowed; border: 1px solid rgba(255,255,255,0.1);">
+        </div>
+        <div class="form-group">
             <label>Ville</label>
-            <input type="text" id="pred_city" required placeholder="ex: Paris">
+            <select id="pred_city" required>
+                <option value="">Entrez un CP...</option>
+            </select>
         </div>
         <div class="form-group">
             <label>Type de bien</label>
@@ -216,277 +226,389 @@
 
 {% block scripts %}
 <script>
-const messageEl = document.getElementById('message');
-const adsContainer = document.getElementById('ads');
+    const messageEl = document.getElementById('message');
+    const adsContainer = document.getElementById('ads');
+    
+    // Pagination state
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentFilters = {};
 
-// Pagination state
-let currentPage = 1;
-let totalPages = 1;
-let currentFilters = {};
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const currentPageNumEl = document.getElementById('current-page-num');
+    const totalPagesNumEl = document.getElementById('total-pages-num');
+    const paginationInfoEl = document.getElementById('pagination-info');
+    
+    // --- PIPELINE HANDLER ---
+    document.getElementById('pipeline-btn').onclick = async () => {
+        messageEl.textContent = "Pipeline ML en cours d'exécution...";
+        document.getElementById('pipeline-btn').disabled = true;
 
-const prevBtn = document.getElementById('prev-btn');
-const nextBtn = document.getElementById('next-btn');
-const currentPageNumEl = document.getElementById('current-page-num');
-const totalPagesNumEl = document.getElementById('total-pages-num');
-const paginationInfoEl = document.getElementById('pagination-info');
+        try {
+            const res = await fetch('/pipeline', { method: 'POST' });
+            const data = await res.json();
 
-// ---------------------------
-// FAVORITES HANDLERS
-// ---------------------------
-async function addToFavorites(ad_id) {
-    const res = await fetch(`/favorites/${ad_id}`, { method: "POST" });
-    const data = await res.json();
-    alert(data.message);
-    loadAds(currentFilters, currentPage);
-}
-
-async function removeFavorite(ad_id) {
-    const res = await fetch(`/favorites/${ad_id}`, { method: "DELETE" });
-    const data = await res.json();
-    alert(data.message);
-    loadAds(currentFilters, currentPage);
-}
-
-// ---------------------------
-// LOAD ADS  (VERSION FINALE)
-// ---------------------------
-async function loadAds(filters = {}, page = 1) {
-    currentFilters = filters;
-    currentPage = page;
-
-    const params = new URLSearchParams({
-        ...filters,
-        page: page,
-        page_size: 20
-    }).toString();
-
-    const res = await fetch(`/ads?${params}`);
-    const data = await res.json();
-
-    totalPages = data.total_pages || 1;
-    updatePaginationUI(data);
-    renderAds(data.ads);
-
-    if (page > 1) {
-        adsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
-
-// ---------------------------
-// RENDER ADS  (VERSION FUSIONNÉE)
-// ---------------------------
-function renderAds(ads) {
-    adsContainer.innerHTML = '';
-
-    if (!ads || ads.length === 0) {
-        adsContainer.innerHTML = `
-            <p style="color: var(--text-muted); grid-column: 1 / -1;">
-                Aucune annonce trouvée.
-            </p>`;
-        return;
-    }
-
-    for (const ad of ads) {
-        const div = document.createElement('div');
-        div.className = 'card';
-
-        const suspiciousBadge = ad.suspicious
-            ? `<span class="badge badge-error">⚠️ Suspect</span>`
-            : '';
-
-        const favButton = ad.is_favorite
-            ? `<button class="fav-btn remove" onclick="removeFavorite(${ad.id})">Retirer des favoris</button>`
-            : `<button class="fav-btn add" onclick="addToFavorites(${ad.id})">Ajouter aux favoris</button>`;
-
-        const imageHtml = ad.image_url
-            ? `<div class="card-img-wrapper"><img src="${ad.image_url}" class="card-img"></div>`
-            : `<div class="card-img-wrapper" style="display:flex; align-items:center; justify-content:center; background:#e5e7eb; color:#9ca3af;">Aperçu indisponible</div>`;
-
-        const priceFormatted = ad.price
-            ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(ad.price)
-            : 'Prix NC';
-
-        div.innerHTML = `
-            ${imageHtml}
-            <div class="card-content">
-                <h3 class="card-title">${ad.title}</h3>
-
-                <div class="card-price">${priceFormatted}</div>
-                <div class="card-meta">
-                    <span style="font-weight:600; color:var(--secondary);">${ad.surface || '?'} m²</span> •
-                    <span style="color:var(--text-muted);">${ad.city || 'Ville inconnue'}</span>
-                </div>
-
-                <div class="card-footer">
-                    <span class="badge badge-info">${ad.type}</span>
-                    ${suspiciousBadge}
-                    ${favButton}
-                    <a href="${ad.url}" target="_blank" class="btn btn-outline">Voir ↗</a>
-                </div>
-            </div>
-        `;
-
-        adsContainer.appendChild(div);
-    }
-}
-
-// ---------------------------
-// PAGINATION UI
-// ---------------------------
-function updatePaginationUI(data) {
-    totalPages = data.total_pages || 1;
-    currentPageNumEl.textContent = currentPage;
-    totalPagesNumEl.textContent = totalPages;
-
-    paginationInfoEl.textContent = `${data.total || 0} annonces`;
-
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= totalPages;
-
-    const controls = document.getElementById('pagination-controls');
-    controls.style.display = totalPages <= 1 ? 'none' : 'flex';
-}
-
-prevBtn.onclick = () => currentPage > 1 && loadAds(currentFilters, currentPage - 1);
-nextBtn.onclick = () => currentPage < totalPages && loadAds(currentFilters, currentPage + 1);
-
-// ---------------------------
-// SCRAP HANDLER
-// ---------------------------
-let scrapInterval = null;
-
-document.getElementById('scrap-btn').onclick = async () => {
-    const pages = document.getElementById('scrap-pages').value || 60;
-    messageEl.textContent = `Scraping ${pages} pages...`;
-    document.getElementById('scrap-btn').disabled = true;
-
-    try {
-        const res = await fetch(`/scrap?pages=${pages}`, { method: 'POST' });
-        const data = await res.json();
-
-        if (!res.ok) {
-            messageEl.textContent = data.detail || 'Erreur scraping.';
-            document.getElementById('scrap-btn').disabled = false;
-            return;
-        }
-
-        messageEl.textContent = "Scraping en cours...";
-
-        scrapInterval = setInterval(async () => {
-            const statusRes = await fetch('/scrap/status');
-            const status = await statusRes.json();
-
-            if (!status.scraping) {
-                clearInterval(scrapInterval);
-                scrapInterval = null;
-                document.getElementById('scrap-btn').disabled = false;
-
-                messageEl.textContent = "Scraping terminé ✔";
-                await loadAds({}, 1);
-                await loadStats();
+            if (!res.ok) {
+                messageEl.info = ""; // Clear info
+                messageEl.textContent = data.detail || "Erreur lors du pipeline.";
+            } else {
+                const m = data.metrics || {};
+                const r2 = m.r2 ? (m.r2 * 100).toFixed(2) : "?";
+                const count = m.n_samples_train + m.n_samples_test || "?";
+                
+                messageEl.innerHTML = `✅ Pipeline terminé ! <br><span style="font-size:0.8rem; color:var(--text-muted);">
+                    Précision (R²) : <b>${r2}%</b> | 
+                    Annonces : <b>${count}</b> | 
+                    Erreur moy (MAE) : <b>${m.mae ? m.mae.toLocaleString() : "?"}€</b>
+                </span>`;
+                console.log("Model saved at:", data.model_path);
             }
-        }, 1000);
-
-    } catch {
-        messageEl.textContent = 'Erreur réseau scraping.';
-        document.getElementById('scrap-btn').disabled = false;
-    }
-};
-
-// ---------------------------
-// FILTER FORM
-// ---------------------------
-document.getElementById('filter-form').onsubmit = (e) => {
-    e.preventDefault();
-    const filters = {
-        city: document.getElementById('city').value.trim(),
-        min_price: document.getElementById('min_price').value,
-        max_price: document.getElementById('max_price').value,
+        } catch (err) {
+            console.error(err);
+            messageEl.textContent = "Erreur réseau lors du pipeline.";
+        } finally {
+            document.getElementById('pipeline-btn').disabled = false;
+        }
     };
-    if (document.getElementById('suspicious_only').checked) filters.suspicious_only = true;
-    if (document.getElementById('order_by_score').checked) filters.order_by_score = true;
-    loadAds(filters, 1);
-};
 
-document.getElementById('reset-btn').onclick = () => {
-    document.getElementById('filter-form').reset();
-    loadAds({}, 1);
-};
+    async function handleZipcode(cp) {
+        if (cp.length === 5) {
+            const citySelect = document.getElementById('pred_city');
+            const regionInput = document.getElementById('pred_region');
+            
+            citySelect.innerHTML = '<option>Chargement...</option>';
+            try {
+                const res = await fetch(`https://geo.api.gouv.fr/communes?codePostal=${cp}&fields=nom,code,region`);
+                const data = await res.json();
+                
+                if (data.length > 0) {
+                    citySelect.innerHTML = '';
+                    data.forEach(commune => {
+                        const opt = document.createElement('option');
+                        opt.value = commune.nom;
+                        opt.textContent = commune.nom;
+                        citySelect.appendChild(opt);
+                    });
+                    // On prend la région de la première commune
+                    regionInput.value = data[0].region.nom;
+                } else {
+                    citySelect.innerHTML = '<option value="">Code inconnu</option>';
+                    regionInput.value = '';
+                }
+            } catch (err) {
+                console.error("API Gouv Error:", err);
+                citySelect.innerHTML = '<option value="">Erreur API</option>';
+            }
+        }
+    }
 
-// ---------------------------
-// STATS SECTION
-// ---------------------------
-let histogramChart = null;
-let evolutionChart = null;
+    // --- PREDICTION HANDLER ---
+    const predictForm = document.getElementById('predict-form');
+    const predictResult = document.getElementById('predict-result');
+    
+    predictForm.onsubmit = async (e) => {
+        e.preventDefault();
+        predictResult.style.display = 'block';
+        predictResult.style.color = 'var(--text-muted)';
+        predictResult.style.fontSize = '1.2rem';
+        predictResult.innerHTML = 'Calcul de l\'estimation en cours...';
+        
+        const payload = {
+            surface: parseFloat(document.getElementById('pred_surface').value),
+            zipcode: document.getElementById('pred_zipcode').value.trim(),
+            region: document.getElementById('pred_region').value,
+            city: document.getElementById('pred_city').value,
+            type: document.getElementById('pred_type').value,
+            category: document.getElementById('pred_category').value,
+            score: 5,
+            has_image: 1
+        };
+        
+        try {
+            const res = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if (!res.ok) {
+                predictResult.style.color = '#ef4444';
+                predictResult.innerHTML = 'Erreur: ' + (data.detail || 'Impossible de faire la prédiction. Vérifiez que le Pipeline a bien été lancé pour générer le modèle.');
+            } else {
+                predictResult.style.color = '#10b981';
+                predictResult.style.fontSize = '2.5rem';
+                // Formater en prix (ex: 154 300 €)
+                const formattedPrice = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(data.estimated_price);
+                predictResult.innerHTML = `Estimation : ${formattedPrice}`;
+            }
+        } catch (err) {
+            predictResult.style.color = '#ef4444';
+            predictResult.innerHTML = "Le serveur est injoignable.";
+        }
+    };
 
-async function loadStats() {
-    try {
-        const res = await fetch('/stats/');
-        const data = await res.json();
+    // --- ADS LIST HANDLER ---
+    async function loadAds(filters = {}, page = 1) {
+        try {
+            currentFilters = filters;
+            currentPage = page;
+            
+            const queryParams = new URLSearchParams({
+                ...filters,
+                page: page,
+                page_size: 20
+            }).toString();
+            
+            const res = await fetch(`/ads?${queryParams}`);
+            const data = await res.json();
+            
+            totalPages = data.total_pages || 1;
+            updatePaginationUI(data);
+            renderAds(data.ads);
+            
+            // Scroll to top of ads section if we have results
+            if (page > 1) {
+                adsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+        } catch (err) {
+            console.error(err);
+            messageEl.textContent = 'Erreur lors du chargement des annonces.';
+        }
+    }
 
-        if (!data.success || data.count === 0) {
-            document.getElementById('stats-container').style.display = 'none';
+    function updatePaginationUI(data) {
+        totalPages = data.total_pages || 1;
+        currentPageNumEl.textContent = currentPage;
+        totalPagesNumEl.textContent = totalPages;
+        
+        paginationInfoEl.textContent = `${data.total || 0} annonces au total`;
+        
+        prevBtn.disabled = (currentPage <= 1);
+        nextBtn.disabled = (currentPage >= totalPages);
+        
+        // Hide pagination if only one page
+        const controls = document.getElementById('pagination-controls');
+        if (totalPages <= 1) {
+            controls.style.display = 'none';
+        } else {
+            controls.style.display = 'flex';
+        }
+    }
+
+    function renderAds(ads) {
+        adsContainer.innerHTML = '';
+        if (!ads || ads.length === 0) {
+            adsContainer.innerHTML = '<p style="color: var(--text-muted); grid-column: 1 / -1;">Aucune annonce trouvée correspondant à ces critères.</p>';
             return;
         }
 
-        document.getElementById('stats-container').style.display = 'block';
+        for (const ad of ads) {
+            const div = document.createElement('div');
+            div.className = 'card';
 
-        document.getElementById('stat-count').textContent = data.count.toLocaleString();
-        document.getElementById('stat-mean').textContent =
-            new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(data.mean);
-        document.getElementById('stat-median').textContent =
-            new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(data.median);
+            const suspiciousBadge = ad.suspicious
+                ? `<span class="badge badge-error">⚠️ Suspect</span>`
+                : '';
 
-        renderHistogram(data.histogram);
-        renderEvolution(data.evolution);
+            const imageHtml = ad.image_url 
+                ? `<div class="card-img-wrapper"><img src="${ad.image_url}" alt="${ad.title}" class="card-img"></div>`
+                : `<div class="card-img-wrapper" style="display:flex; align-items:center; justify-content:center; background:#e5e7eb; color:#9ca3af;">Aperçu indisponible</div>`;
 
-    } catch (err) {
-        console.error("Stats error:", err);
+            // Formatting price nicely
+            const priceFormatted = ad.price ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(ad.price) : 'Prix NC';
+
+            div.innerHTML = `
+                ${imageHtml}
+                <div class="card-content">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                        <h3 class="card-title" title="${ad.title}">${ad.title}</h3>
+                    </div>
+                    
+                    <div class="card-price">${priceFormatted}</div>
+                    
+                    <div class="card-meta">
+                        <span style="font-weight:600; color:var(--secondary);">${ad.surface ? ad.surface + 'm²' : '? m²'}</span> • 
+                        <span style="color:var(--text-muted);">${ad.zipcode ? ad.zipcode + ' ' : ''}${ad.city || 'Lieu inconnu'}</span>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <span class="badge badge-info" style="font-weight:500;">${ad.type || 'Inconnu'}</span>
+                        ${suspiciousBadge}
+                        <a href="${ad.url}" target="_blank" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; margin-left:auto;">Voir ↗</a>
+                    </div>
+                </div>
+            `;
+            adsContainer.appendChild(div);
+        }
     }
-}
 
-function renderHistogram(histoData) {
-    const ctx = document.getElementById('histogramChart').getContext('2d');
-    if (histogramChart) histogramChart.destroy();
-
-    histogramChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: histoData.map(d => d.range),
-            datasets: [{
-                label: "Nombre d'annonces",
-                data: histoData.map(d => d.count),
-                backgroundColor: 'rgba(37,99,235,0.6)',
-                borderColor: 'rgb(37,99,235)',
-                borderWidth: 1
-            }]
+    // --- PAGINATION LISTENERS ---
+    prevBtn.onclick = () => {
+        if (currentPage > 1) {
+            loadAds(currentFilters, currentPage - 1);
         }
-    });
-}
+    };
 
-function renderEvolution(evoData) {
-    const ctx = document.getElementById('evolutionChart').getContext('2d');
-    if (evolutionChart) evolutionChart.destroy();
-
-    evolutionChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: evoData.map(d => d.date),
-            datasets: [{
-                label: 'Prix moyen (€)',
-                data: evoData.map(d => d.avg_price),
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16,185,129,0.1)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4
-            }]
+    nextBtn.onclick = () => {
+        if (currentPage < totalPages) {
+            loadAds(currentFilters, currentPage + 1);
         }
-    });
-}
+    };
 
-// Initial load
-loadAds();
-loadStats();
+    // --- SCRAPING PROCESS ---
+    let scrapInterval = null;
+    document.getElementById('scrap-btn').onclick = async () => {
+        const pages = document.getElementById('scrap-pages').value || 60;
+        messageEl.textContent = `Scraping de ${pages} pages démarré...`;
+        document.getElementById('scrap-btn').disabled = true;
+        try {
+            const res = await fetch(`/scrap?pages=${pages}`, {method: 'POST'});
+            const data = await res.json();
+            if (!res.ok) {
+                messageEl.textContent = data.detail || 'Une erreur est survenue.';
+                document.getElementById('scrap-btn').disabled = false;
+                return;
+            }
+
+            messageEl.textContent = "Scraping en cours, veuillez patienter...";
+
+            scrapInterval = setInterval(async () => {
+                const statusRes = await fetch('/scrap/status');
+                const statusData = await statusRes.json();
+                if (!statusData.scraping) {
+                    clearInterval(scrapInterval);
+                    scrapInterval = null;
+                    document.getElementById('scrap-btn').disabled = false;
+                    messageEl.textContent = "Scraping terminé ✔";
+                    await loadAds(currentFilters, 1); // Reload first page
+                    await loadStats(); // Refresh dashboard
+                }
+            }, 1000);
+
+        } catch (err) {
+            console.error(err);
+            messageEl.textContent = 'Erreur réseau lors du lancement du scrap.';
+            document.getElementById('scrap-btn').disabled = false;
+        }
+    };
+
+    document.getElementById('status-btn').onclick = async () => {
+        try {
+            const res = await fetch('/scrap/status');
+            const data = await res.json();
+            messageEl.textContent = data.scraping ? 'Scraping est actuellement en cours ⏳' : 'Aucun scraping en cours 🟢';
+        } catch {
+            messageEl.textContent = 'Erreur lors de la récupération du statut.';
+        }
+    };
+
+    document.getElementById('filter-form').onsubmit = (e) => {
+        e.preventDefault();
+        const filters = {
+            city: document.getElementById('city').value.trim(),
+            min_price: document.getElementById('min_price').value,
+            max_price: document.getElementById('max_price').value,
+        };
+        if (document.getElementById('suspicious_only').checked) filters.suspicious_only = true;
+        if (document.getElementById('order_by_score').checked) filters.order_by_score = true;
+        loadAds(filters, 1); // Reset to page 1 on search
+    };
+
+    document.getElementById('reset-btn').onclick = () => {
+        document.getElementById('filter-form').reset();
+        loadAds({}, 1);
+    };
+
+    // --- STATS HANDLER ---
+    let histogramChart = null;
+    let evolutionChart = null;
+
+    async function loadStats() {
+        try {
+            const res = await fetch('/stats/');
+            const data = await res.json();
+            
+            if (!data.success || data.count === 0) {
+                document.getElementById('stats-container').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('stats-container').style.display = 'block';
+            
+            // Update KPIs
+            document.getElementById('stat-count').textContent = data.count.toLocaleString();
+            document.getElementById('stat-mean').textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(data.mean);
+            document.getElementById('stat-median').textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(data.median);
+
+            // Render Histogram
+            renderHistogram(data.histogram);
+            
+            // Render Evolution
+            renderEvolution(data.evolution);
+
+        } catch (err) {
+            console.error("Error loading stats:", err);
+        }
+    }
+
+    function renderHistogram(histoData) {
+        const ctx = document.getElementById('histogramChart').getContext('2d');
+        if (histogramChart) histogramChart.destroy();
+        
+        histogramChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: histoData.map(d => d.range),
+                datasets: [{
+                    label: 'Nombre d\'annonces',
+                    data: histoData.map(d => d.count),
+                    backgroundColor: 'rgba(37, 99, 235, 0.6)',
+                    borderColor: 'rgb(37, 99, 235)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    function renderEvolution(evoData) {
+        const ctx = document.getElementById('evolutionChart').getContext('2d');
+        if (evolutionChart) evolutionChart.destroy();
+        
+        evolutionChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: evoData.map(d => d.date),
+                datasets: [{
+                    label: 'Prix moyen (€)',
+                    data: evoData.map(d => d.avg_price),
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: false } }
+            }
+        });
+    }
+
+    // Initialize list
+    loadAds();
+    loadStats();
 </script>
+
 {% endblock %}
