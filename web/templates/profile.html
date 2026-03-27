@@ -13,16 +13,35 @@
 <h3>Mes favoris</h3>
 
 {% if favorites %}
-    {% for ad in favorites %}
-        <div class="ad-card">
-            <strong>{{ ad.title }}</strong><br>
-            {{ ad.price }} €<br>
-            {{ ad.city }} - {{ ad.zipcode }}<br>
-            <a href="{{ ad.url }}" target="_blank">Voir l'annonce</a>
-        </div>
-    {% endfor %}
+{% for ad in favorites %}
+<div class="ad-card">
+
+    <div>
+        <strong>{{ ad.title }}</strong><br>
+        {{ ad.price }} €<br>
+        {{ ad.city }} - {{ ad.zipcode }}<br>
+    </div>
+
+    <!-- Colonne actions -->
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+
+        <a href="{{ ad.url }}" target="_blank" style="color: var(--secondary); font-weight: bold;">
+            Voir l'annonce
+        </a>
+
+        <button
+                class="fav-btn remove"
+                onclick="removeFavorite({{ ad.id }})"
+        >
+            Retirer des favoris
+        </button>
+
+    </div>
+
+</div>
+{% endfor %}
 {% else %}
-    <p>Aucun favori pour le moment.</p>
+<p>Aucun favori pour le moment.</p>
 {% endif %}
 
 <h3>Changer le mot de passe</h3>
@@ -54,5 +73,19 @@
         <p style="color:green">✔ Mot de passe mis à jour avec succès</p>
     {% endif %}
 </form>
+
+<script>
+async function removeFavorite(ad_id) {
+    const res = await fetch(`/favorites/${ad_id}`, {
+        method: "DELETE"
+    });
+
+    const data = await res.json();
+    alert(data.message);
+
+    // Recharge la page pour actualiser la liste
+    window.location.reload();
+}
+</script>
 
 {% endblock %}
