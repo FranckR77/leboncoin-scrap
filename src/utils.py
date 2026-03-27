@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 import pandas as pd
 import numpy as np
+from src.processing.features import engineer_features
 
 # Save all ads into a JSON file
 def save_to_json(data: list[dict], filename: str = "./data/ads.json"):
@@ -303,10 +304,39 @@ def process_silver(
     print(f"[SILVER] Clean file: {out_file}")
     print(f"[QUALITY] Report: {quality_file}")
 
-    return out_file, quality_file
+    return out_file, report
+
+def process_gold(silver_file: str, output_dir="./datalake/gold"):
+    """
+    Step 6: Feature Engineering (Gold layer).
+    Transforme les données cleanées en données exploitables par le ML.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    df = pd.read_parquet(silver_file)
+    df_features = engineer_features(df)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    out_file = f"{output_dir}/ads_gold_{timestamp}.parquet"
+    df_features.to_parquet(out_file, index=False)
+
+    print(f"[GOLD] Gold file (features): {out_file}")
+    return out_file
 
 def full_data_pipeline():
+    # Bronze -> Staging
     staging_file = export_staging_ads()
     if not staging_file:
         return None
-    return process_silver(staging_file)
+
+    # Staging -> Silver
+    silver_file, _ = process_silver(staging_file)
+
+    # Silver -> Gold
+    gold_file = process_gold(silver_file)
+    
+    # Train Model
+    from src.models.train import train_model
+    model_path = train_model(gold_file)
+
+    return {"gold_file": gold_file, "model_path": model_path}

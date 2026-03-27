@@ -1,304 +1,492 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard — Immo Scraper{% endblock %}
+{% block title %}Dashboard — LBC Analytics{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    /* Styling for the Prediction Section */
+    .predict-box {
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0.15) 100%);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+    }
+    .predict-box h2 {
+        color: var(--secondary);
+    }
+    .price-result {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #10b981;
+        margin-top: 1rem;
+        text-align: center;
+        text-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    }
+    .control-panel {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: var(--bg-surface);
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--border-color);
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+    }
+    .stat-card .value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--secondary);
+    }
+    .stat-card .label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.5rem;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<section>
-    <h2>Actions</h2>
-    <div class="actions">
-        <button id="scrap-btn">Lancer le scrap</button>
-        <button id="status-btn">Vérifier le statut</button>
-        <button id="pipeline-btn">Pipeline complet</button>
-        <span id="message"></span>
+<div class="control-panel">
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button id="scrap-btn" class="btn">🚀 Scrapper</button>
+        <input type="number" id="scrap-pages" value="60" min="1" max="100" style="width: 80px; padding: 0.7rem;" title="Nombre de pages (35 annonces/page)">
+    </div>
+    <button id="pipeline-btn" class="btn btn-outline">⚙️ Entraîner Modèle ML</button>
+    <button id="status-btn" class="btn btn-outline" style="border: none; padding-left: 0;">Statut</button>
+    <span id="message" style="margin-left: auto; align-self: center; font-weight: 500; color: var(--secondary); font-size: 0.9rem;"></span>
+</div>
+
+<!-- ======================= -->
+<!-- STATISTICS DASHBOARD    -->
+<!-- ======================= -->
+<section id="stats-container" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>Tableau de bord du marché</h2>
+        <button onclick="loadStats()" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">🔄 Actualiser</button>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div id="stat-count" class="value">-</div>
+            <div class="label">Annonces indexées</div>
+        </div>
+        <div class="stat-card">
+            <div id="stat-mean" class="value">-</div>
+            <div class="label">Prix Moyen</div>
+        </div>
+        <div class="stat-card">
+            <div id="stat-median" class="value">-</div>
+            <div class="label">Prix Médian</div>
+        </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));">
+        <div class="stat-card" style="text-align: left;">
+            <h3 style="margin-bottom: 1rem; font-size: 1rem;">Distribution des prix</h3>
+            <div class="chart-container">
+                <canvas id="histogramChart"></canvas>
+            </div>
+        </div>
+        <div class="stat-card" style="text-align: left;">
+            <h3 style="margin-bottom: 1rem; font-size: 1rem;">Évolution du prix moyen</h3>
+            <div class="chart-container">
+                <canvas id="evolutionChart"></canvas>
+            </div>
+        </div>
     </div>
 </section>
 
+<!-- ======================= -->
+<!-- PREDICTION SECTION      -->
+<!-- ======================= -->
+<section class="predict-box">
+    <h2>Estimer un bien (IA Machine Learning)</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Utilisez le modèle entraîné pour obtenir une estimation de prix instantanée sur le marché actuel.</p>
+    
+    <form id="predict-form" class="form-grid">
+        <div class="form-group">
+            <label>Surface (m²)</label>
+            <input type="number" id="pred_surface" required min="9" placeholder="ex: 45">
+        </div>
+        <div class="form-group">
+            <label>Ville</label>
+            <input type="text" id="pred_city" required placeholder="ex: Paris">
+        </div>
+        <div class="form-group">
+            <label>Type de bien</label>
+            <select id="pred_type">
+                <option value="Appartement">Appartement</option>
+                <option value="Maison">Maison</option>
+                <option value="Terrain">Terrain</option>
+                <option value="Parking">Parking</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Catégorie</label>
+            <select id="pred_category">
+                <option value="Ventes immobilières">Ventes immobilières</option>
+                <option value="Locations">Locations</option>
+                <option value="Colocations">Colocations</option>
+            </select>
+        </div>
+        <div class="form-group" style="align-items: center; justify-content: center; padding-bottom: 0.5rem;">
+            <button type="submit" class="btn btn-success" style="width: 100%;">🪄 Estimer le prix</button>
+        </div>
+    </form>
+    
+    <div id="predict-result" class="price-result" style="display: none;"></div>
+</section>
+
+<!-- ======================= -->
+<!-- FILTERS SECTION         -->
+<!-- ======================= -->
 <section>
-    <h2>Filtres</h2>
-    <form id="filter-form">
-        <label>
-            Ville :
-            <input type="text" id="city" name="city" placeholder="ex: Nîmes">
-        </label>
-        <label>
-            Prix min :
-            <input type="number" id="min_price" name="min_price" min="0">
-        </label>
-        <label>
-            Prix max :
-            <input type="number" id="max_price" name="max_price" min="0">
-        </label>
-
-        <label>
-            <input type="checkbox" id="suspicious_only" name="suspicious_only">
-            Annonces suspectes uniquement
-        </label>
-
-        <label>
-            <input type="checkbox" id="order_by_score" name="order_by_score">
-            Trier par score décroissant
-        </label>
-
-        <button type="submit">Appliquer les filtres</button>
-        <button type="button" id="reset-btn">Réinitialiser</button>
+    <h2>Filtrer les annonces</h2>
+    <form id="filter-form" class="form-grid">
+        <div class="form-group">
+            <label>Ville</label>
+            <input type="text" id="city" placeholder="ex: Paris">
+        </div>
+        <div class="form-group">
+            <label>Prix minimum (€)</label>
+            <input type="number" id="min_price" min="0">
+        </div>
+        <div class="form-group">
+            <label>Prix maximum (€)</label>
+            <input type="number" id="max_price" min="0">
+        </div>
+        
+        <div class="form-group" style="justify-content: center;">
+            <label class="checkbox-group">
+                <input type="checkbox" id="suspicious_only">
+                ⚠️ Suspectes uniquement
+            </label>
+            <label class="checkbox-group mt-2">
+                <input type="checkbox" id="order_by_score">
+                ⭐ Trier par pertinence
+            </label>
+        </div>
+        
+        <div class="form-group" style="display: flex; flex-direction: row; gap: 0.5rem; justify-content: flex-end; align-items: flex-end;">
+            <button type="button" id="reset-btn" class="btn btn-outline" style="padding: 0.75rem;">Effacer</button>
+            <button type="submit" class="btn">Appliquer</button>
+        </div>
     </form>
 </section>
 
-<section>
-    <h2>Annonces</h2>
-    <div id="ads"></div>
-    <div id="pagination" class="pagination"></div>
+<!-- ======================= -->
+<!-- ADS DISPLAY SECTION     -->
+<!-- ======================= -->
+<section style="background: transparent; box-shadow: none; border: none; padding: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Dernières annonces scrapées</h2>
+        <div id="pagination-info" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">
+            Chargement...
+        </div>
+    </div>
+    
+    <div id="ads" class="grid"></div>
+
+    <!-- Pagination Controls -->
+    <div id="pagination-controls" style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-top: 3rem; margin-bottom: 2rem;">
+        <button id="prev-btn" class="btn btn-outline" style="min-width: 120px;" disabled>← Précédent</button>
+        <div id="page-display" style="font-weight: 600; color: var(--secondary); background: rgba(37, 99, 235, 0.1); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(37, 99, 235, 0.2);">
+            Page <span id="current-page-num">1</span> / <span id="total-pages-num">1</span>
+        </div>
+        <button id="next-btn" class="btn btn-outline" style="min-width: 120px;" disabled>Suivant →</button>
+    </div>
 </section>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const messageEl = document.getElementById('message');
-    const adsContainer = document.getElementById('ads');
-    
-    document.getElementById('pipeline-btn').onclick = async () => {
-        messageEl.textContent = "Pipeline en cours…";
+const messageEl = document.getElementById('message');
+const adsContainer = document.getElementById('ads');
 
-        try {
-            const res = await fetch('/pipeline', { method: 'POST' });
-            const data = await res.json();
+// Pagination state
+let currentPage = 1;
+let totalPages = 1;
+let currentFilters = {};
 
-            if (!res.ok) {
-                messageEl.textContent = data.detail || "Erreur lors du pipeline.";
-                return;
-            }
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+const currentPageNumEl = document.getElementById('current-page-num');
+const totalPagesNumEl = document.getElementById('total-pages-num');
+const paginationInfoEl = document.getElementById('pagination-info');
 
-            messageEl.textContent = "Pipeline terminé ✔";
-            console.log("Staging :", data.staging_file);
-            console.log("Clean :", data.clean_file);
-            console.log("Rapport qualité :", data.quality_report);
+// ---------------------------
+// FAVORITES HANDLERS
+// ---------------------------
+async function addToFavorites(ad_id) {
+    const res = await fetch(`/favorites/${ad_id}`, { method: "POST" });
+    const data = await res.json();
+    alert(data.message);
+    loadAds(currentFilters, currentPage);
+}
 
-        } catch (err) {
-            console.error(err);
-            messageEl.textContent = "Erreur lors du pipeline.";
-        }
-    };
+async function removeFavorite(ad_id) {
+    const res = await fetch(`/favorites/${ad_id}`, { method: "DELETE" });
+    const data = await res.json();
+    alert(data.message);
+    loadAds(currentFilters, currentPage);
+}
 
-    async function addToFavorites(ad_id) {
-        const res = await fetch(`/favorites/${ad_id}`, {method: "POST"});
-        const data = await res.json();
-        alert(data.message);
-        loadAds(); // rafraîchir l'affichage
+// ---------------------------
+// LOAD ADS  (VERSION FINALE)
+// ---------------------------
+async function loadAds(filters = {}, page = 1) {
+    currentFilters = filters;
+    currentPage = page;
+
+    const params = new URLSearchParams({
+        ...filters,
+        page: page,
+        page_size: 20
+    }).toString();
+
+    const res = await fetch(`/ads?${params}`);
+    const data = await res.json();
+
+    totalPages = data.total_pages || 1;
+    updatePaginationUI(data);
+    renderAds(data.ads);
+
+    if (page > 1) {
+        adsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// ---------------------------
+// RENDER ADS  (VERSION FUSIONNÉE)
+// ---------------------------
+function renderAds(ads) {
+    adsContainer.innerHTML = '';
+
+    if (!ads || ads.length === 0) {
+        adsContainer.innerHTML = `
+            <p style="color: var(--text-muted); grid-column: 1 / -1;">
+                Aucune annonce trouvée.
+            </p>`;
+        return;
     }
 
-    async function removeFavorite(ad_id) {
-        const res = await fetch(`/favorites/${ad_id}`, {method: "DELETE"});
-        const data = await res.json();
-        alert(data.message);
-        loadAds(); // rafraîchir l'affichage
-    }
+    for (const ad of ads) {
+        const div = document.createElement('div');
+        div.className = 'card';
 
-    async function loadAds(filters = {}, page = 1) {
-        filters.page = page;  // on injecte la page dans les paramètres
-
-        const params = new URLSearchParams(filters).toString();
-        const res = await fetch(`/ads?${params}`);
-        const data = await res.json();
-
-        renderAds(data.ads);
-        renderPagination(data, filters);
-    }
-
-    function renderPagination(data, filters = {}) {
-        const paginationEl = document.getElementById('pagination');
-        paginationEl.innerHTML = '';
-
-        const current = data.page;
-        const total = data.total_pages;
-
-        if (total <= 1) return;
-
-        // Bouton Précédent
-        if (current > 1) {
-            const prevBtn = document.createElement('button');
-            prevBtn.textContent = "❮";
-            prevBtn.onclick = () => loadAds(filters, current - 1);
-            paginationEl.appendChild(prevBtn);
-        }
-
-        // Si page > 2, afficher "..."
-        if (current > 2) {
-            const firstBtn = document.createElement('button');
-            firstBtn.textContent = "1";
-            firstBtn.onclick = () => loadAds(filters, 1);
-            paginationEl.appendChild(firstBtn);
-
-            const dots = document.createElement('span');
-            dots.textContent = "...";
-            paginationEl.appendChild(dots);
-        }
-
-        // Page active - 1
-        if (current > 1) {
-            const prevPage = document.createElement('button');
-            prevPage.textContent = current - 1;
-            prevPage.onclick = () => loadAds(filters, current - 1);
-            paginationEl.appendChild(prevPage);
-        }
-
-        // Page active
-        const currentBtn = document.createElement('button');
-        currentBtn.textContent = current;
-        currentBtn.classList.add("active");
-        paginationEl.appendChild(currentBtn);
-
-        // Page active + 1
-        if (current < total) {
-            const nextPage = document.createElement('button');
-            nextPage.textContent = current + 1;
-            nextPage.onclick = () => loadAds(filters, current + 1);
-            paginationEl.appendChild(nextPage);
-        }
-
-        // "..." avant la dernière page
-        if (current < total - 1) {
-            const dots = document.createElement('span');
-            dots.textContent = "...";
-            paginationEl.appendChild(dots);
-
-            const lastBtn = document.createElement('button');
-            lastBtn.textContent = total;
-            lastBtn.onclick = () => loadAds(filters, total);
-            paginationEl.appendChild(lastBtn);
-        }
-
-        // Bouton Suivant
-        if (current < total) {
-            const nextBtn = document.createElement('button');
-            nextBtn.textContent = "❯";
-            nextBtn.onclick = () => loadAds(filters, current + 1);
-            paginationEl.appendChild(nextBtn);
-        }
-    }
-
-    function renderAds(ads) {
-        adsContainer.innerHTML = '';
-        if (!ads || ads.length === 0) {
-            adsContainer.innerHTML = '<p>Aucune annonce trouvée.</p>';
-            return;
-        }
-
-        for (const ad of ads) {
-            const div = document.createElement('div');
-            div.className = 'ad-card';
-
-            const suspiciousBadge = ad.suspicious
-                    ? `<span class="badge badge-suspicious">Suspect</span>`
-                    : '';
-
-            const scoreDisplay = (ad.score !== undefined && ad.score !== null)
-                    ? `<small>Score : ${ad.score}/5</small><br>`
-                    : '';
+        const suspiciousBadge = ad.suspicious
+            ? `<span class="badge badge-error">⚠️ Suspect</span>`
+            : '';
 
         const favButton = ad.is_favorite
             ? `<button class="fav-btn remove" onclick="removeFavorite(${ad.id})">Retirer des favoris</button>`
             : `<button class="fav-btn add" onclick="addToFavorites(${ad.id})">Ajouter aux favoris</button>`;
 
+        const imageHtml = ad.image_url
+            ? `<div class="card-img-wrapper"><img src="${ad.image_url}" class="card-img"></div>`
+            : `<div class="card-img-wrapper" style="display:flex; align-items:center; justify-content:center; background:#e5e7eb; color:#9ca3af;">Aperçu indisponible</div>`;
+
+        const priceFormatted = ad.price
+            ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(ad.price)
+            : 'Prix NC';
+
         div.innerHTML = `
-        <div>
-            <strong>${ad.title}</strong><br>
-            ${ad.price ? `${ad.price} €` : 'Prix non communiqué'}<br>
-            ${ad.surface ? `${ad.surface}` : 'Surface NC'}<br>
-            ${ad.city} - ${ad.zipcode}<br>
-            <small>${ad.category} / ${ad.type}</small><br>
-            <a href="${ad.url}" target="_blank">Voir l'annonce</a><br>
-        </div>
-        <div>
-            ${favButton}<br>
-            ${ad.image_url ? `<img src="${ad.image_url}" class="ad-image">` : ''}
-        </div>
+            ${imageHtml}
+            <div class="card-content">
+                <h3 class="card-title">${ad.title}</h3>
+
+                <div class="card-price">${priceFormatted}</div>
+                <div class="card-meta">
+                    <span style="font-weight:600; color:var(--secondary);">${ad.surface || '?'} m²</span> •
+                    <span style="color:var(--text-muted);">${ad.city || 'Ville inconnue'}</span>
+                </div>
+
+                <div class="card-footer">
+                    <span class="badge badge-info">${ad.type}</span>
+                    ${suspiciousBadge}
+                    ${favButton}
+                    <a href="${ad.url}" target="_blank" class="btn btn-outline">Voir ↗</a>
+                </div>
+            </div>
         `;
+
         adsContainer.appendChild(div);
-        }
-        }
+    }
+}
 
-        let scrapInterval = null;
+// ---------------------------
+// PAGINATION UI
+// ---------------------------
+function updatePaginationUI(data) {
+    totalPages = data.total_pages || 1;
+    currentPageNumEl.textContent = currentPage;
+    totalPagesNumEl.textContent = totalPages;
 
-        document.getElementById('scrap-btn').onclick = async () => {
-            messageEl.textContent = 'Scraping démarré...';
+    paginationInfoEl.textContent = `${data.total || 0} annonces`;
 
-            try {
-            const res = await fetch('/scrap', {method: 'POST'});
-            const data = await res.json();
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
 
-            if (!res.ok) {
-            messageEl.textContent = data.detail || 'Une erreur est survenue.';
+    const controls = document.getElementById('pagination-controls');
+    controls.style.display = totalPages <= 1 ? 'none' : 'flex';
+}
+
+prevBtn.onclick = () => currentPage > 1 && loadAds(currentFilters, currentPage - 1);
+nextBtn.onclick = () => currentPage < totalPages && loadAds(currentFilters, currentPage + 1);
+
+// ---------------------------
+// SCRAP HANDLER
+// ---------------------------
+let scrapInterval = null;
+
+document.getElementById('scrap-btn').onclick = async () => {
+    const pages = document.getElementById('scrap-pages').value || 60;
+    messageEl.textContent = `Scraping ${pages} pages...`;
+    document.getElementById('scrap-btn').disabled = true;
+
+    try {
+        const res = await fetch(`/scrap?pages=${pages}`, { method: 'POST' });
+        const data = await res.json();
+
+        if (!res.ok) {
+            messageEl.textContent = data.detail || 'Erreur scraping.';
+            document.getElementById('scrap-btn').disabled = false;
             return;
         }
 
-            messageEl.textContent = "Scraping en cours…";
+        messageEl.textContent = "Scraping en cours...";
 
-            // 🔥 Vérification du statut toutes les 1s
-            scrapInterval = setInterval(async () => {
+        scrapInterval = setInterval(async () => {
             const statusRes = await fetch('/scrap/status');
-            const statusData = await statusRes.json();
+            const status = await statusRes.json();
 
-            if (!statusData.scraping) {
-            // ✔ Scrap terminé
-            clearInterval(scrapInterval);
-            scrapInterval = null;
+            if (!status.scraping) {
+                clearInterval(scrapInterval);
+                scrapInterval = null;
+                document.getElementById('scrap-btn').disabled = false;
 
-            messageEl.textContent = "Scraping terminé, mise à jour…";
-
-            await loadAds(); // 🔥 Recharge automatique des annonces
-
-            messageEl.textContent = "Annonces mises à jour ✔";
-        }
+                messageEl.textContent = "Scraping terminé ✔";
+                await loadAds({}, 1);
+                await loadStats();
+            }
         }, 1000);
 
-        } catch (err) {
-            console.error(err);
-            messageEl.textContent = 'Erreur lors du lancement du scrap.';
+    } catch {
+        messageEl.textContent = 'Erreur réseau scraping.';
+        document.getElementById('scrap-btn').disabled = false;
+    }
+};
+
+// ---------------------------
+// FILTER FORM
+// ---------------------------
+document.getElementById('filter-form').onsubmit = (e) => {
+    e.preventDefault();
+    const filters = {
+        city: document.getElementById('city').value.trim(),
+        min_price: document.getElementById('min_price').value,
+        max_price: document.getElementById('max_price').value,
+    };
+    if (document.getElementById('suspicious_only').checked) filters.suspicious_only = true;
+    if (document.getElementById('order_by_score').checked) filters.order_by_score = true;
+    loadAds(filters, 1);
+};
+
+document.getElementById('reset-btn').onclick = () => {
+    document.getElementById('filter-form').reset();
+    loadAds({}, 1);
+};
+
+// ---------------------------
+// STATS SECTION
+// ---------------------------
+let histogramChart = null;
+let evolutionChart = null;
+
+async function loadStats() {
+    try {
+        const res = await fetch('/stats/');
+        const data = await res.json();
+
+        if (!data.success || data.count === 0) {
+            document.getElementById('stats-container').style.display = 'none';
+            return;
         }
-        };
 
-        document.getElementById('status-btn').onclick = async () => {
-            try {
-            const res = await fetch('/scrap/status');
-            const data = await res.json();
-            messageEl.textContent = data.scraping
-            ? 'Scraping en cours...'
-            : 'Aucun scraping en cours.';
-        } catch {
-            messageEl.textContent = 'Erreur lors de la récupération du statut.';
+        document.getElementById('stats-container').style.display = 'block';
+
+        document.getElementById('stat-count').textContent = data.count.toLocaleString();
+        document.getElementById('stat-mean').textContent =
+            new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(data.mean);
+        document.getElementById('stat-median').textContent =
+            new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(data.median);
+
+        renderHistogram(data.histogram);
+        renderEvolution(data.evolution);
+
+    } catch (err) {
+        console.error("Stats error:", err);
+    }
+}
+
+function renderHistogram(histoData) {
+    const ctx = document.getElementById('histogramChart').getContext('2d');
+    if (histogramChart) histogramChart.destroy();
+
+    histogramChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: histoData.map(d => d.range),
+            datasets: [{
+                label: "Nombre d'annonces",
+                data: histoData.map(d => d.count),
+                backgroundColor: 'rgba(37,99,235,0.6)',
+                borderColor: 'rgb(37,99,235)',
+                borderWidth: 1
+            }]
         }
-        };
+    });
+}
 
-        document.getElementById('filter-form').onsubmit = (e) => {
-            e.preventDefault();
+function renderEvolution(evoData) {
+    const ctx = document.getElementById('evolutionChart').getContext('2d');
+    if (evolutionChart) evolutionChart.destroy();
 
-            const filters = {
-            city: document.getElementById('city').value.trim(),
-            min_price: document.getElementById('min_price').value,
-            max_price: document.getElementById('max_price').value,
-        };
-
-            const suspiciousCheckbox = document.getElementById('suspicious_only');
-            const orderScoreCheckbox = document.getElementById('order_by_score');
-
-            if (suspiciousCheckbox.checked) {
-            filters.suspicious_only = true;
+    evolutionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: evoData.map(d => d.date),
+            datasets: [{
+                label: 'Prix moyen (€)',
+                data: evoData.map(d => d.avg_price),
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4
+            }]
         }
-            if (orderScoreCheckbox.checked) {
-            filters.order_by_score = true;
-        }
+    });
+}
 
-            loadAds(filters);
-        };
-
-        document.getElementById('reset-btn').onclick = () => {
-            document.getElementById('filter-form').reset();
-            loadAds();
-        };
-
-        // Chargement initial
-        loadAds();
+// Initial load
+loadAds();
+loadStats();
 </script>
 {% endblock %}
-```
